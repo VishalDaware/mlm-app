@@ -4,7 +4,6 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request, { params }) {
   try {
-    // First, find the parent user by their public userId to get their database ID
     const parentUser = await prisma.user.findUnique({
       where: { userId: params.userId },
     });
@@ -13,10 +12,9 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Now, find all users whose 'uplineId' matches the parent user's database ID
     const downline = await prisma.user.findMany({
       where: { uplineId: parentUser.id },
-      select: { // Select only the fields you want to send to the frontend
+      select: {
         id: true,
         userId: true,
         name: true,

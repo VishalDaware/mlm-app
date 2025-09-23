@@ -132,7 +132,7 @@ function ProductCard({ product, onPurchase }) {
           />
           <button
             onClick={handleBuyClick}
-            className="w-full h-10 flex justify-center items-center px-4 py-2 bg-blue-600 text-white font-bold rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed"
+            className="w-full h-10 flex justify-center items-center px-4 py-2 bg-green-600 text-white font-bold rounded-md hover:bg-green-700 transition-colors disabled:bg-green-400 disabled:cursor-not-allowed"
             disabled={product.stock < 1 || isSubmitting}
           >
             {isSubmitting ? <Spinner size={20} color="#FFF" /> : (product.stock > 0 ? 'Buy Now' : 'Out of Stock')}

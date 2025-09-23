@@ -78,6 +78,18 @@ async function main() {
       uplineId: distributor.id,
     },
   });
+
+  const farmer = await prisma.user.upsert({
+    where: { userId: 'FRM456' },
+    update: { uplineId: dealer1.id },
+    create: {
+      userId: 'FRM456',
+      name: 'Aditya',
+      password: hashedPassword,
+      role: 'Farmer',
+      uplineId: dealer1.id, // Linked to Dealer 'Rohan'
+    },
+  });
   
   console.log('Seeding finished.');
 }

@@ -1,11 +1,11 @@
 // src/app/api/auth/login/route.js
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+// 1. Import 'SignJWT' from 'jose' instead of the old library
+import { SignJWT } from 'jose';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-// FIX: Changed from 'export default async function' to 'export async function POST'
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -19,10 +19,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // This will be used when we create users with hashed passwords
-    // const isPasswordCorrect = await bcrypt.compare(password, user.password);
-    
-    // For now, we use a simple check for the initial 'password'
+    // This logic correctly handles both hashed and unhashed passwords
     const isPasswordCorrect = (user.password.length > 20) 
       ? await bcrypt.compare(password, user.password)
       : (password === user.password);
@@ -31,17 +28,25 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const token = jwt.sign(
-      { id: user.id, userId: user.userId, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
-    );
+    // 2. Prepare the secret key for 'jose'
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+
+    // 3. Create the JWT using the 'jose' library
+    const token = await new SignJWT({
+        id: user.id,
+        userId: user.userId,
+        role: user.role,
+      })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('1d')
+      .sign(secret);
 
     cookies().set('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 60 * 60 * 24,
+      maxAge: 60 * 60 * 24, // 1 day
       path: '/',
     });
 

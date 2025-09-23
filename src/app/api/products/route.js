@@ -1,9 +1,24 @@
 // src/app/api/products/route.js
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
+import { cookies } from 'next/headers';
+import { jwtVerify } from 'jose';
 
-// GET all products (no changes here)
+// ✅ helper to get user from JWT
+async function getUserFromToken() {
+  const token = cookies().get('token')?.value;
+  if (!token) return null;
+
+  try {
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
+    return payload; // { id, userId, role }
+  } catch {
+    return null;
+  }
+}
+
+// GET all products
 export async function GET() {
   try {
     const products = await prisma.product.findMany({
@@ -16,28 +31,26 @@ export async function GET() {
   }
 }
 
-// POST a new product (Admin only) - UPDATED
+// POST a new product (Admin only)
 export async function POST(request) {
   try {
-    // 1. Safely get the user payload string from headers
-    const headersList = headers();
-    const userPayloadString = headersList.get('X-User-Payload');
+    const userPayload = await getUserFromToken();
 
-    // 2. Check if the payload exists before trying to parse it
-    if (!userPayloadString) {
-      return NextResponse.json({ error: 'Unauthorized: User payload not found in headers.' }, { status: 401 });
+    if (!userPayload) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userPayload = JSON.parse(userPayloadString);
-
-    // 3. Check if the user is an Admin
     if (userPayload.role !== 'Admin') {
-      return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden: Only Admins can add products.' }, { status: 403 });
     }
 
     const { name, price, stock } = await request.json();
     const newProduct = await prisma.product.create({
-      data: { name, price: parseFloat(price), stock: parseInt(stock) },
+      data: { 
+        name, 
+        price: parseFloat(price), 
+        stock: parseInt(stock) 
+      },
     });
     return NextResponse.json(newProduct, { status: 201 });
 

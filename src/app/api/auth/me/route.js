@@ -1,28 +1,33 @@
 // src/app/api/auth/me/route.js
 import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 import prisma from '@/lib/prisma';
+import { cookies } from 'next/headers';
+import { jwtVerify } from 'jose';
 
-export async function GET(request) {
+export async function GET() {
   try {
-    const headerList = headers();
-    const userPayloadString = headerList.get('X-User-Payload');
-
-    if (!userPayloadString) {
-      return new NextResponse(JSON.stringify({ error: 'Authentication token is missing or invalid' }), { status: 401 });
+    // Get token from cookie
+    const token = cookies().get('token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized: No token' }, { status: 401 });
     }
 
-    const userPayload = JSON.parse(userPayloadString);
+    // Verify token
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
 
-    const user = await prisma.user.findUnique({ where: { id: userPayload.id } });
-
+    // Find user in DB
+    const user = await prisma.user.findUnique({ where: { id: payload.id } });
     if (!user) {
-      return new NextResponse(JSON.stringify({ error: 'User not found' }), { status: 404 });
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Return user without password
     const { password, ...userWithoutPassword } = user;
     return NextResponse.json(userWithoutPassword);
+
   } catch (error) {
-    return new NextResponse(JSON.stringify({ error: 'Invalid token or server error' }), { status: 401 });
+    console.error("Auth check failed:", error);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 }

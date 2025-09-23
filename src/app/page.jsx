@@ -64,6 +64,8 @@ export default function LoginPage() {
   return (
     <main className="flex justify-center items-center h-screen font-sans">
       <div className="p-10 bg-white/80 backdrop-blur-sm rounded-xl shadow-2xl w-full max-w-md border border-gray-200/50">
+      <img src="/logo.png" alt="Logo" className="mx-auto mb-6 w-16 h-16 object-contain" />
+
         <h1 className="text-4xl font-bold mb-8 text-center text-gray-800">Welcome</h1>
 
         {/* Admin Login Form */}

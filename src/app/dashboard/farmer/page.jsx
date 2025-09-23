@@ -1,24 +1,36 @@
 // src/app/dashboard/farmer/page.jsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-import { getProducts, createSale } from '@/services/localStorageService';
+import { getProducts, createSale } from '@/services/apiService';
 import DashboardHeader from '@/components/DashboardHeader';
 import toast from 'react-hot-toast';
+import Spinner from '@/components/Spinner';
 
 export default function FarmerDashboard() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   
   const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      const data = await getProducts();
+      setProducts(data);
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
+      toast.error("Could not load products.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (user) {
-      setProducts(getProducts());
-    }
-  }, [user]);
+    if(user) fetchProducts();
+  }, [user, fetchProducts]);
 
   useEffect(() => {
     if (user && user.role !== 'Farmer') {
@@ -31,23 +43,32 @@ export default function FarmerDashboard() {
     router.push('/');
   };
 
-  const handlePurchase = (productId, quantity) => {
-    if (!user || !user.upline) {
+  const handlePurchase = async (productId, quantity) => {
+    if (!user || !user.uplineId) {
       toast.error("Error: Your account is not linked to a dealer.");
-      return;
+      return false;
     }
     if (quantity < 1) {
       toast.error("Please enter a valid quantity.");
-      return;
+      return false;
     }
-
-    createSale({ sellerId: user.upline, productId, quantity: parseInt(quantity) });
-    setProducts(getProducts());
-    toast.success('Purchase successful!');
+    try {
+      await createSale({ sellerId: user.uplineId, productId, quantity: parseInt(quantity) });
+      toast.success('Purchase successful!');
+      fetchProducts(); // Re-fetch products to update stock
+      return true;
+    } catch (error) {
+      console.error("Purchase failed:", error);
+      return false;
+    }
   };
 
-  if (!user) {
-    return <p className="text-center mt-10">Loading...</p>;
+  if (!user || isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-stone-50">
+        <Spinner size={100} color="#166534" />
+      </div>
+    );
   }
 
   return (
@@ -68,18 +89,27 @@ export default function FarmerDashboard() {
   );
 }
 
-// --- Redesigned ProductCard Component ---
+// ProductCard sub-component with its own submitting state
 function ProductCard({ product, onPurchase }) {
   const [quantity, setQuantity] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleBuyClick = async () => {
+    setIsSubmitting(true);
+    const success = await onPurchase(product.id, quantity);
+    // Only reset quantity if purchase was successful
+    if (success) {
+      setQuantity(1);
+    }
+    setIsSubmitting(false);
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow border border-stone-200 flex flex-col">
-      {/* Product Info Section */}
       <div className="p-4 flex-grow">
         <div className="flex items-start gap-3">
-          {/* A generic icon for agriculture products */}
           <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-            <svg className="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+             <svg className="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
           </div>
           <div>
             <h3 className="text-lg font-bold text-gray-800 leading-tight">{product.name}</h3>
@@ -89,7 +119,6 @@ function ProductCard({ product, onPurchase }) {
         <p className="text-2xl text-green-600 font-bold my-4">₹{product.price.toFixed(2)}</p>
       </div>
 
-      {/* Action Section pushed to the bottom */}
       <div className="mt-auto p-4 border-t border-stone-200 bg-stone-50 rounded-b-lg">
         <div className="flex items-center gap-2">
           <input
@@ -99,14 +128,14 @@ function ProductCard({ product, onPurchase }) {
             className="w-20 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             min="1"
             max={product.stock}
+            disabled={isSubmitting}
           />
           <button
-            onClick={() => onPurchase(product.id, quantity)}
-            // Changed button color to be consistent
-            className="flex-grow px-4 py-2 bg-green-600 text-white font-bold rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-            disabled={product.stock < 1}
+            onClick={handleBuyClick}
+            className="w-full h-10 flex justify-center items-center px-4 py-2 bg-blue-600 text-white font-bold rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed"
+            disabled={product.stock < 1 || isSubmitting}
           >
-            {product.stock > 0 ? 'Buy Now' : 'Out of Stock'}
+            {isSubmitting ? <Spinner size={20} color="#FFF" /> : (product.stock > 0 ? 'Buy Now' : 'Out of Stock')}
           </button>
         </div>
       </div>

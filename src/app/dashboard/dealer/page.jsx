@@ -1,12 +1,13 @@
 // src/app/dashboard/dealer/page.jsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-import { getProducts, createSale, getSalesForUser } from '@/services/localStorageService';
+import { getProducts, createSale, getSalesForUser } from '@/services/apiService';
 import DashboardHeader from '@/components/DashboardHeader';
 import toast from 'react-hot-toast';
+import Spinner from '@/components/Spinner';
 
 export default function DealerDashboard() {
   const router = useRouter();
@@ -15,17 +16,33 @@ export default function DealerDashboard() {
   const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]);
   const [totalEarnings, setTotalEarnings] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [saleProduct, setSaleProduct] = useState('');
   const [saleQuantity, setSaleQuantity] = useState(1);
 
-  // ... (All logic functions like useEffect, handleLogout, etc. remain the same)
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     if (user) {
-      setProducts(getProducts());
-      const userSales = getSalesForUser(user.userId).filter(s => s.sellerId === user.userId);
-      setSales(userSales);
+      try {
+        const [productData, salesData] = await Promise.all([
+          getProducts(),
+          getSalesForUser(user.userId),
+        ]);
+        setProducts(productData);
+        // Filter sales to only show those where the current user was the direct seller
+        setSales(salesData.filter(s => s.sellerId === user.id));
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+        toast.error("Could not load dashboard data.");
+      } finally {
+        setIsLoading(false);
+      }
     }
   }, [user]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   useEffect(() => {
     if (user) {
@@ -34,31 +51,29 @@ export default function DealerDashboard() {
     }
   }, [sales, user]);
 
-  useEffect(() => {
-    if (user && user.role !== 'Dealer') {
-      router.push('/');
-    }
-  }, [user, router]);
+  const handleLogout = () => { logout(); router.push('/'); };
+  useEffect(() => { if (user && user.role !== 'Dealer') router.push('/'); }, [user, router]);
 
-  const handleLogout = () => {
-    logout();
-    router.push('/');
-  };
-
-  const handleMakeSale = (e) => {
+  const handleMakeSale = async (e) => {
     e.preventDefault();
     if (!saleProduct || saleQuantity < 1) return;
-    createSale({ sellerId: user.userId, productId: saleProduct, quantity: parseInt(saleQuantity) });
-    const userSales = getSalesForUser(user.userId).filter(s => s.sellerId === user.userId);
-    setSales(userSales);
-    setProducts(getProducts());
-    setSaleProduct('');
-    setSaleQuantity(1);
-    toast.success('Sale completed successfully!');
+    try {
+      await createSale({ sellerId: user.id, productId: saleProduct, quantity: parseInt(saleQuantity) });
+      toast.success('Sale completed successfully!');
+      setSaleProduct('');
+      setSaleQuantity(1);
+      fetchData(); // Refresh all data
+    } catch (error) {
+      console.error("Failed to make sale:", error);
+    }
   };
 
-  if (!user) {
-    return <p className="text-center mt-10">Loading...</p>;
+  if (!user || isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-stone-50">
+        <Spinner size={100} color="#166534" />
+      </div>
+    );
   }
 
   const getProductName = (productId) => {
@@ -91,7 +106,6 @@ export default function DealerDashboard() {
                   <tbody>
                     {sales.length > 0 ? sales.map(sale => (
                       <tr key={sale.id} className="border-b border-stone-200 hover:bg-stone-50">
-                        {/* FIX: Added dark text color to these table cells */}
                         <td className="p-3 text-gray-800">{getProductName(sale.productId)}</td>
                         <td className="p-3 text-gray-800">{sale.quantity}</td>
                         <td className="p-3 text-gray-800">₹{sale.totalAmount.toFixed(2)}</td>

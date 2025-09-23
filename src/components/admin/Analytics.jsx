@@ -1,8 +1,9 @@
 // src/components/admin/Analytics.jsx
 'use client';
 
-// NOTE: We no longer need useState or useEffect from React
-import { getSales, getUsers } from '@/services/localStorageService';
+import { useEffect, useState } from 'react';
+import { getSalesForUser } from '@/services/apiService';
+import { getSales, getUsers } from '@/services/apiService';
 
 const StatCard = ({ title, value, colorClass }) => (
   <div className={`p-6 rounded-lg shadow-md ${colorClass}`}>
@@ -11,19 +12,40 @@ const StatCard = ({ title, value, colorClass }) => (
   </div>
 );
 
-// We remove the 'activeTab' prop as it's no longer needed
 export default function Analytics() {
-  // --- Calculations are now done directly on every render ---
-  const allSales = getSales();
-  const allUsers = getUsers();
+  const [loading, setLoading] = useState(true);
+  const [totalSalesValue, setTotalSalesValue] = useState(0);
+  const [totalCommissionValue, setTotalCommissionValue] = useState(0);
+  const [activeUsersCount, setActiveUsersCount] = useState(0);
 
-  const totalSalesValue = allSales.reduce((acc, sale) => acc + sale.totalAmount, 0);
-  const totalCommissionValue = allSales.reduce(
-    (acc, sale) => acc + sale.sellerCommission + sale.uplineCommission,
-    0
-  );
-  const activeUsersCount = allUsers.filter(user => user.role !== 'Admin').length;
-  // --- End of calculations ---
+  useEffect(() => {
+    let mounted = true;
+    const fetchStats = async () => {
+      try {
+        const sales = await getSales();
+        const users = await getUsers();
+
+        if (!mounted) return;
+
+        const totalSales = sales.reduce((acc, sale) => acc + sale.totalAmount, 0);
+        const totalCommission = sales.reduce((acc, sale) => acc + sale.sellerCommission + sale.uplineCommission, 0);
+        const activeUsers = users.filter(u => u.role !== 'Admin').length;
+
+        setTotalSalesValue(totalSales);
+        setTotalCommissionValue(totalCommission);
+        setActiveUsersCount(activeUsers);
+      } catch (err) {
+        console.error('Failed to fetch analytics data', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+    return () => { mounted = false; };
+  }, []);
+
+  if (loading) return <p>Loading analytics...</p>;
 
   return (
     <div>

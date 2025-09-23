@@ -1,10 +1,11 @@
 // src/components/admin/ProductManagement.jsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getProducts, addProduct, updateProduct, deleteProduct } from '@/services/localStorageService';
+import { useState, useEffect, useCallback } from 'react';
+import { getProducts, addProduct, updateProduct, deleteProduct } from '@/services/apiService';
 import ProductModal from '@/components/ProductModal';
-import { ThreeDots } from 'react-loader-spinner';
+import Spinner from '@/components/Spinner';
+import toast from 'react-hot-toast';
 
 export default function ProductManagement() {
   const [products, setProducts] = useState([]);
@@ -12,13 +13,24 @@ export default function ProductManagement() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Simulate a network delay for a better UX with the spinner
-    setTimeout(() => {
-      setProducts(getProducts());
+  // Use useCallback to create a stable function for fetching data
+  const fetchProducts = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await getProducts();
+      setProducts(data);
+    } catch (error) {
+      // Error toast is already handled in apiService
+      console.error("Failed to fetch products:", error);
+    } finally {
       setIsLoading(false);
-    }, 700); 
+    }
   }, []);
+
+  // Fetch products on initial component mount
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const handleOpenModal = (product = null) => {
     setEditingProduct(product);
@@ -30,21 +42,31 @@ export default function ProductManagement() {
     setIsModalOpen(false);
   };
 
-  const handleSaveProduct = (productData) => {
-    if (editingProduct) {
-      const updatedProducts = updateProduct(editingProduct.id, productData);
-      setProducts(updatedProducts);
-    } else {
-      const updatedProducts = addProduct(productData);
-      setProducts(updatedProducts);
+  const handleSaveProduct = async (productData) => {
+    try {
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, productData);
+        toast.success('Product updated successfully!');
+      } else {
+        await addProduct(productData);
+        toast.success('Product added successfully!');
+      }
+      handleCloseModal();
+      fetchProducts(); // Re-fetch products to show the latest data
+    } catch (error) {
+      console.error("Failed to save product:", error);
     }
-    handleCloseModal();
   };
 
-  const handleDeleteProduct = (productId) => {
+  const handleDeleteProduct = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
-      const updatedProducts = deleteProduct(productId);
-      setProducts(updatedProducts);
+      try {
+        await deleteProduct(productId);
+        toast.success('Product deleted successfully!');
+        fetchProducts(); // Re-fetch products to show the latest data
+      } catch (error) {
+        console.error("Failed to delete product:", error);
+      }
     }
   };
 
@@ -61,7 +83,6 @@ export default function ProductManagement() {
       <div className="bg-white p-6 rounded-lg shadow-lg min-h-[400px]">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-700">Product Management</h2>
-          {/* Ensured button color consistency */}
           <button 
             onClick={() => handleOpenModal()} 
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
@@ -73,13 +94,12 @@ export default function ProductManagement() {
         
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
-            <ThreeDots color="#166534" height={80} width={80} />
+            <Spinner size={80} color="#166534" />
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                {/* Updated table header style */}
                 <tr className="bg-stone-100 text-stone-600 uppercase text-sm">
                   <th className="p-3 font-semibold">Product Name</th>
                   <th className="p-3 font-semibold">Price</th>
@@ -94,7 +114,6 @@ export default function ProductManagement() {
                     <td className="p-3 text-gray-800">₹{product.price.toFixed(2)}</td>
                     <td className="p-3 text-gray-800">{product.stock}</td>
                     <td className="p-3">
-                      {/* Updated action link colors */}
                       <button onClick={() => handleOpenModal(product)} className="font-medium text-teal-600 hover:text-teal-800 mr-4">Edit</button>
                       <button onClick={() => handleDeleteProduct(product.id)} className="font-medium text-red-600 hover:text-red-800">Delete</button>
                     </td>

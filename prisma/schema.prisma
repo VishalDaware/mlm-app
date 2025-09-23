@@ -1,15 +1,71 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum Role {
+  Admin
+  Distributor
+  Dealer
+  Farmer
+}
+
+model User {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  name      String
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Self-relation (upline & downline hierarchy)
+  uplineId String?
+  upline   User?   @relation("Hierarchy", fields: [uplineId], references: [id])
+  downline User[]  @relation("Hierarchy")
+
+  // Relation to sales (user as seller)
+  salesMade Sale[]
+
+  // NEW: Relation to sales (user as upline)
+  uplineSales Sale[] @relation("UplineSales")
+}
+
+model Product {
+  id        String   @id @default(cuid())
+  name      String
+  price     Float
+  stock     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relation to sales
+  sales Sale[]
+}
+
+model Sale {
+  id               String   @id @default(cuid())
+  quantity         Int
+  totalAmount      Float
+  sellerCommission Float
+  uplineCommission Float
+  createdAt        DateTime @default(now())
+
+  // Relation to Product
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+
+  // Relation to Seller (User)
+  seller   User   @relation(fields: [sellerId], references: [id])
+  sellerId String
+
+  // NEW: Relation to Upline (User)
+  upline   User?   @relation("UplineSales", fields: [uplineId], references: [id])
+  uplineId String?
 }

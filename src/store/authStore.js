@@ -1,29 +1,31 @@
 // src/store/authStore.js
 import { create } from 'zustand';
+import { login as apiLogin, checkAuthStatus } from '@/services/apiService';
+import { useRouter } from 'next/navigation';
 
-// Create the store
 export const useAuthStore = create((set) => ({
-  // State
   user: null,
-
-  // Actions
-  login: (userData) => {
-    // Save user to localStorage for persistence
-    localStorage.setItem('loggedInUser', JSON.stringify(userData));
-    set({ user: userData });
+  
+  login: async (credentials) => {
+    try {
+      const userData = await apiLogin(credentials);
+      set({ user: userData });
+      return userData;
+    } catch (error) {
+      console.error("Login failed:", error);
+      throw error;
+    }
   },
 
   logout: () => {
-    // Remove user from localStorage
-    localStorage.removeItem('loggedInUser');
+    // We'll need a logout API later, for now just clear state
     set({ user: null });
   },
   
-  // Action to check localStorage on initial load
-  checkAuth: () => {
-    const userJson = localStorage.getItem('loggedInUser');
-    if (userJson) {
-      set({ user: JSON.parse(userJson) });
+  checkAuth: async () => {
+    const userData = await checkAuthStatus();
+    if (userData) {
+      set({ user: userData });
     }
   },
 }));

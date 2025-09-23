@@ -3,9 +3,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserById } from '@/services/localStorageService';
 import { useAuthStore } from '@/store/authStore';
-import toast from 'react-hot-toast';
+import Spinner from '@/components/Spinner'; // Local spinner
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,33 +14,55 @@ export default function LoginPage() {
   const [adminPassword, setAdminPassword] = useState('password');
   const [role, setRole] = useState('Distributor');
   const [userId, setUserId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false); // State to handle loading
 
-  const handleAdminLogin = (e) => {
+  const handleAdminLogin = async (e) => {
     e.preventDefault();
-    const user = getUserById(adminEmail);
-    if (user && user.password === adminPassword && user.role === 'Admin') {
-      login(user);
-      router.push('/dashboard/admin');
-    } else {
-      toast.error('Invalid admin credentials.');
+    setIsSubmitting(true);
+    try {
+      // Call the new login function from the store, which calls the API
+      const user = await login({ 
+        userId: adminEmail, 
+        password: adminPassword, 
+        role: 'Admin' 
+      });
+
+      // If login is successful and returns a user, redirect
+      if (user) {
+        router.push('/dashboard/admin');
+      }
+    } catch (error) {
+      // Error toast is already handled by the apiService, so we just log it
+      console.error('Admin login failed');
+    } finally {
+      setIsSubmitting(false); // Stop loading spinner
     }
   };
 
-  const handleUserLogin = (e) => {
+  const handleUserLogin = async (e) => {
     e.preventDefault();
-    const user = getUserById(userId);
-    if (user && user.password === 'password' && user.role === role) {
-      login(user);
-      const path = `/dashboard/${role.toLowerCase()}`;
-      router.push(path);
-    } else {
-      toast.error('Invalid User ID or role.');
+    setIsSubmitting(true);
+    try {
+      // Call the new login function from the store for other roles
+      const user = await login({ 
+        userId, 
+        password: 'password', // Using default password as planned
+        role 
+      });
+
+      if (user) {
+        const path = `/dashboard/${role.toLowerCase()}`;
+        router.push(path);
+      }
+    } catch (error) {
+      console.error('User login failed');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <main className="flex justify-center items-center h-screen font-sans">
-      {/* Semi-transparent card with backdrop blur for a modern look */}
       <div className="p-10 bg-white/80 backdrop-blur-sm rounded-xl shadow-2xl w-full max-w-md border border-gray-200/50">
         <h1 className="text-4xl font-bold mb-8 text-center text-gray-800">Welcome</h1>
 
@@ -53,33 +74,20 @@ export default function LoginPage() {
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                 <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884zM18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path></svg>
               </div>
-              <input
-                type="text"
-                placeholder="Admin User ID"
-                value={adminEmail}
-                onChange={(e) => setAdminEmail(e.target.value)}
-                className="w-full p-3 pl-10 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                required
-              />
+              <input type="text" placeholder="Admin User ID" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} className="w-full p-3 pl-10 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" required />
             </div>
             <div className="relative mb-4">
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                 <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>
               </div>
-              <input
-                type="password"
-                placeholder="Password"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                className="w-full p-3 pl-10 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                required
-              />
+              <input type="password" placeholder="Password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="w-full p-3 pl-10 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" required />
             </div>
             <button
               type="submit"
-              className="w-full p-3 bg-green-600 text-white rounded-md font-bold hover:bg-green-700 transition-colors shadow-md"
+              disabled={isSubmitting}
+              className="w-full h-12 flex justify-center items-center p-3 bg-green-600 text-white rounded-md font-bold hover:bg-green-700 transition-colors shadow-md disabled:bg-green-400"
             >
-              Log In
+              {isSubmitting ? <Spinner size={30} color="#FFF" /> : 'Log In'}
             </button>
           </form>
         </div>
@@ -95,33 +103,23 @@ export default function LoginPage() {
         <div>
           <form onSubmit={handleUserLogin}>
             <label className="block mb-2 font-semibold text-gray-600">Log in as</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-900"
-            >
+            <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-900">
               <option value="Distributor">Distributor</option>
               <option value="Dealer">Dealer</option>
               <option value="Farmer">Farmer</option>
             </select>
             <div className="relative mb-4">
-               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                 <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path></svg>
               </div>
-              <input
-                type="text"
-                placeholder="Enter User ID (e.g., DIS3309)"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                className="w-full p-3 pl-10 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
-                required
-              />
+              <input type="text" placeholder="Enter User ID (e.g., DIS3309)" value={userId} onChange={(e) => setUserId(e.target.value)} className="w-full p-3 pl-10 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500" required />
             </div>
             <button
               type="submit"
-              className="w-full p-3 bg-teal-600 text-white rounded-md font-bold hover:bg-teal-700 transition-colors shadow-md"
+              disabled={isSubmitting}
+              className="w-full h-12 flex justify-center items-center p-3 bg-teal-600 text-white rounded-md font-bold hover:bg-teal-700 transition-colors shadow-md disabled:bg-teal-400"
             >
-              Log In
+              {isSubmitting ? <Spinner size={30} color="#FFF" /> : 'Log In'}
             </button>
           </form>
         </div>

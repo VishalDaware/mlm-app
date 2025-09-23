@@ -2,23 +2,30 @@
 'use client';
 
 import { useState } from 'react';
-import { getHierarchy } from '@/services/localStorageService';
+import { getHierarchy } from '@/services/apiService'; // Use apiService
 import HierarchyNode from './HierarchyNode';
+import Spinner from '@/components/Spinner'; // Local spinner
 
 export default function HierarchyView() {
   const [searchInput, setSearchInput] = useState('');
   const [hierarchyData, setHierarchyData] = useState(null);
   const [error, setError] = useState('');
+  const [isSearching, setIsSearching] = useState(false); // Loading state
 
-  const handleSearch = () => {
+  const handleSearch = async () => { // Make async
     if (!searchInput.trim()) return;
-    const data = getHierarchy(searchInput);
-    if (data) {
+    setIsSearching(true);
+    setHierarchyData(null);
+    setError('');
+
+    try {
+      const data = await getHierarchy(searchInput);
       setHierarchyData(data);
-      setError('');
-    } else {
+    } catch (err) {
       setHierarchyData(null);
-      setError(`User with ID "${searchInput}" not found.`);
+      setError(`User with ID "${searchInput}" not found or an error occurred.`);
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -33,16 +40,16 @@ export default function HierarchyView() {
           placeholder="Enter User ID (e.g., DIS3309)"
           className="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
         />
-        {/* Changed button color from blue to green */}
         <button 
           onClick={handleSearch} 
-          className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          disabled={isSearching}
+          className="w-40 h-10 flex justify-center items-center px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:bg-green-400"
         >
-          View Hierarchy
+          {isSearching ? <Spinner size={20} color="#FFF" /> : 'View Hierarchy'}
         </button>
       </div>
       
-      <div>
+      <div className="min-h-[200px]">
         {error && <p className="text-red-500">{error}</p>}
         {hierarchyData && <HierarchyNode user={hierarchyData} />}
       </div>

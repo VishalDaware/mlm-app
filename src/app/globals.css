@@ -24,3 +24,31 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+body {
+  background-image: url('/back.jpg'); /* The image from your public folder */
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+/* Ensure form input text is black across the app (overrides some browser defaults) */
+@layer base {
+  input,
+  textarea,
+  select {
+    color: #000000; /* primary text color inside inputs */
+  }
+
+  /* Make sure placeholders are readable but not grayed out too much */
+  input::placeholder,
+  textarea::placeholder {
+    color: rgba(0,0,0,0.6);
+  }
+
+  /* For dark-mode/scoped themes where inputs may inherit white, explicitly prefer black unless a different theme sets it */
+  :root input,
+  :root textarea,
+  :root select {
+    color: #000000;
+  }
+}

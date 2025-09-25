@@ -124,3 +124,9 @@ export const getSales = () => {
     credentials: 'include'
   }).then(handleResponse);
 };
+
+export const getUsersByRole = (role) => {
+  return fetch(`/api/users/by-role?role=${role}`, {
+    credentials: 'include'
+  }).then(handleResponse);
+};

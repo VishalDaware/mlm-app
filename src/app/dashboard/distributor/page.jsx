@@ -4,24 +4,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-// 1. Import the getHierarchy function
-import { getProducts, getDownline, addUser, createSale, getSalesForUser, getHierarchy } from '@/services/apiService';
+// 1. Import getPendingPayoutForUser
+import { getProducts, getDownline, addUser, createSale, getSalesForUser, getHierarchy, getPendingPayoutForUser } from '@/services/apiService';
 import DashboardHeader from '@/components/DashboardHeader';
 import toast from 'react-hot-toast';
 import { ThreeDots } from 'react-loader-spinner';
-// 2. Import the reusable HierarchyNode component
 import HierarchyNode from '@/components/admin/HierarchyNode';
 
 export default function DistributorDashboard() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   
-  const [products, setProducts] = useState([]);
-  const [downline, setDownline] = useState([]);
-  const [sales, setSales] = useState([]);
-  const [analytics, setAnalytics] = useState({ earnings: 0, teamSize: 0 });
-  const [isLoading, setIsLoading] = useState(true);
-  const [hierarchy, setHierarchy] = useState(null); // 3. Add state for hierarchy data
+  const [products, setProducts]       = useState([]);
+  const [downline, setDownline]       = useState([]);
+  const [sales, setSales]             = useState([]);
+  // 2. Add 'pending' to the analytics state
+  const [analytics, setAnalytics]     = useState({ earnings: 0, teamSize: 0, pending: 0 });
+  const [isLoading, setIsLoading]     = useState(true);
+  const [hierarchy, setHierarchy]     = useState(null);
 
   const [saleProduct, setSaleProduct] = useState('');
   const [saleQuantity, setSaleQuantity] = useState(1);
@@ -30,17 +30,32 @@ export default function DistributorDashboard() {
   const fetchData = useCallback(async () => {
     if (user) {
       try {
-        // 4. Fetch hierarchy data along with other data
-        const [productData, downlineData, salesData, hierarchyData] = await Promise.all([
+        // 3. Fetch pending payout data along with other data
+        const [productData, downlineData, salesData, hierarchyData, payoutData] = await Promise.all([
           getProducts(),
           getDownline(user.userId),
           getSalesForUser(user.userId),
           getHierarchy(user.userId),
+          getPendingPayoutForUser(user.userId),
         ]);
         setProducts(productData);
         setDownline(downlineData);
         setSales(salesData);
-        setHierarchy(hierarchyData); // 5. Set the hierarchy state
+        setHierarchy(hierarchyData);
+
+        // Calculate earnings and set all analytics data here
+        const totalEarnings = salesData.reduce((acc, sale) => {
+          if (sale.sellerId === user.id) return acc + sale.sellerCommission;
+          if (sale.uplineId === user.id) return acc + sale.uplineCommission;
+          return acc;
+        }, 0);
+
+        setAnalytics({
+          earnings: totalEarnings,
+          teamSize: downlineData.length,
+          pending: payoutData.pendingBalance, // 4. Set pending balance from API
+        });
+
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
         toast.error("Could not load dashboard data.");
@@ -50,21 +65,9 @@ export default function DistributorDashboard() {
     }
   }, [user]);
 
-  // All other logic functions (useEffect, handleLogout, handleAddDealer, etc.) remain exactly the same.
   useEffect(() => {
-    if (user) fetchData();
+    if(user) fetchData();
   }, [user, fetchData]);
-
-  useEffect(() => {
-    if (user && sales) {
-      const totalEarnings = sales.reduce((acc, sale) => {
-        if (sale.sellerId === user.id) return acc + sale.sellerCommission;
-        if (sale.uplineId === user.id) return acc + sale.uplineCommission;
-        return acc;
-      }, 0);
-      setAnalytics({ earnings: totalEarnings, teamSize: downline.length });
-    }
-  }, [sales, downline, user]);
   
   const handleLogout = () => { logout(); router.push('/'); };
   useEffect(() => { if (user && user.role !== 'Distributor') router.push('/'); }, [user, router]);
@@ -87,11 +90,23 @@ export default function DistributorDashboard() {
       
       <main className="container mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 flex flex-col gap-8">
-          {/* Analytics and Make a Sale sections remain the same */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold tracking-wider uppercase">Total Earnings</h3><p className="text-4xl font-bold text-green-600 mt-2">₹{analytics.earnings.toFixed(2)}</p></div>
-            <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold tracking-wider uppercase">Team Size</h3><p className="text-4xl font-bold text-teal-600 mt-2">{analytics.teamSize}</p></div>
+          
+          {/* 5. Updated Analytics section with 3 cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+              <h3 className="text-stone-500 text-sm font-semibold tracking-wider uppercase">Total Earnings</h3>
+              <p className="text-4xl font-bold text-green-600 mt-2">₹{analytics.earnings.toFixed(2)}</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+              <h3 className="text-stone-500 text-sm font-semibold tracking-wider uppercase">Pending Payout</h3>
+              <p className="text-4xl font-bold text-red-600 mt-2">₹{analytics.pending.toFixed(2)}</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+              <h3 className="text-stone-500 text-sm font-semibold tracking-wider uppercase">Team Size</h3>
+              <p className="text-4xl font-bold text-teal-600 mt-2">{analytics.teamSize}</p>
+            </div>
           </div>
+          
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-semibold text-gray-700 mb-4">Make a Sale</h2>
             <form onSubmit={handleMakeSale} className="flex flex-wrap items-end gap-4">
@@ -101,20 +116,16 @@ export default function DistributorDashboard() {
             </form>
           </div>
 
-          {/* 6. NEW: Add the Team Hierarchy section */}
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-semibold text-gray-700 mb-4">My Team Hierarchy</h2>
             {hierarchy ? (
-              <div className="pl-2">
-                <HierarchyNode user={hierarchy} />
-              </div>
+              <div className="pl-2"><HierarchyNode user={hierarchy} /></div>
             ) : (
               <p className="text-gray-500">Hierarchy data could not be loaded.</p>
             )}
           </div>
         </div>
         
-        {/* The right sidebar remains the same */}
         <div className="flex flex-col gap-8">
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-semibold text-gray-700 mb-4">Add New Dealer</h2>

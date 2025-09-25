@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "npx prisma db seed"
+    "seed": "npx prisma db seed",
+     "fix:hierarchy": "node prisma/fixHierarchy.js"
   },
   "dependencies": {
     "@prisma/client": "^5.17.0",

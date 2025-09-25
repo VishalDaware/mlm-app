@@ -130,3 +130,27 @@ export const getUsersByRole = (role) => {
     credentials: 'include'
   }).then(handleResponse);
 };
+
+// --- Payouts ---
+// NEW: Function to get all pending payouts for the admin
+export const getPendingPayouts = () => {
+  return fetch(`/api/payouts/pending`, {
+    credentials: 'include'
+  }).then(handleResponse);
+};
+
+// NEW: Function to create a new payout record
+export const createPayout = (payoutData) => {
+  return fetch(`/api/payouts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payoutData),
+    credentials: 'include'
+  }).then(handleResponse);
+};
+
+export const getPendingPayoutForUser = (userId) => {
+  return fetch(`/api/payouts/user/${userId}`, {
+    credentials: 'include'
+  }).then(handleResponse);
+};

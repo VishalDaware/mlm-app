@@ -33,6 +33,7 @@ model User {
 
   // NEW: Relation to sales (user as upline)
   uplineSales Sale[] @relation("UplineSales")
+  payouts   Payout[]
 }
 
 model Product {
@@ -66,4 +67,14 @@ model Sale {
   // NEW: Relation to Upline (User)
   upline   User?   @relation("UplineSales", fields: [uplineId], references: [id])
   uplineId String?
+}
+
+model Payout {
+  id        String   @id @default(cuid())
+  amount    Float
+  createdAt DateTime @default(now())
+
+  // Relation to the user who received the payout
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
 }

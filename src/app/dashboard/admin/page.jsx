@@ -9,13 +9,15 @@ import ProductManagement from '@/components/admin/ProductManagement';
 import HierarchyView from '@/components/admin/HierarchyView';
 import AddNewUser from '@/components/admin/AddNewUser';
 import Analytics from '@/components/admin/Analytics'; 
+import PayoutsView from '@/components/admin/PayoutsView';
 
 const TABS = {
   REPORTS: 'Reports',
   ANALYTICS: 'Analytics & Overview',
-  HIERARCHY: 'Distributor Hierarchy',
+  HIERARCHY: 'Hierarchy',
   ADD_USER: 'Add New User',
   PRODUCTS: 'Product Management',
+  PAYOUTS: 'Payouts',
 };
 
 export default function AdminDashboard() {
@@ -46,6 +48,8 @@ export default function AdminDashboard() {
         return <HierarchyView />;
       case TABS.ADD_USER:
         return <AddNewUser />;
+      case TABS.PAYOUTS: 
+         return <PayoutsView />;
       default:
         return <Reports />;
     }

@@ -1,18 +1,17 @@
-// src/components/admin/HierarchyView.jsx
 'use client';
 
 import { useState } from 'react';
-import { getHierarchy } from '@/services/apiService'; // Use apiService
+import { getHierarchy } from '@/services/apiService'; 
 import HierarchyNode from './HierarchyNode';
-import Spinner from '@/components/Spinner'; // Local spinner
+import Spinner from '@/components/Spinner'; 
 
 export default function HierarchyView() {
   const [searchInput, setSearchInput] = useState('');
   const [hierarchyData, setHierarchyData] = useState(null);
   const [error, setError] = useState('');
-  const [isSearching, setIsSearching] = useState(false); // Loading state
+  const [isSearching, setIsSearching] = useState(false); 
 
-  const handleSearch = async () => { // Make async
+  const handleSearch = async () => { 
     if (!searchInput.trim()) return;
     setIsSearching(true);
     setHierarchyData(null);

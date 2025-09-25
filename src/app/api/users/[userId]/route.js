@@ -1,4 +1,3 @@
-// src/app/api/sales/user/[userId]/route.js
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
@@ -6,7 +5,6 @@ export async function GET(request, { params }) {
   try {
     const { userId } = params;
 
-    // Case-insensitive find
     const user = await prisma.user.findFirst({
       where: {
         userId: {

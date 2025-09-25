@@ -1,4 +1,3 @@
-// src/app/api/users/[userId]/hierarchy/route.js
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
@@ -25,7 +24,6 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Find the full tree structure for the requested rootUser
     const hierarchyData = userMap.get(rootUser.id);
 
     return NextResponse.json(hierarchyData);

@@ -1,10 +1,8 @@
-// src/app/api/products/[id]/route.js
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 
-// ✅ Using the same helper function for consistency
 async function getUserFromToken() {
   const token = cookies().get('token')?.value;
   if (!token) return null;
@@ -18,7 +16,6 @@ async function getUserFromToken() {
   }
 }
 
-// PUT (update) a product (Admin only)
 export async function PUT(request, { params }) {
   try {
     const userPayload = await getUserFromToken();
@@ -44,7 +41,6 @@ export async function PUT(request, { params }) {
   }
 }
 
-// DELETE a product (Admin only)
 export async function DELETE(request, { params }) {
   try {
     const userPayload = await getUserFromToken();
@@ -54,7 +50,7 @@ export async function DELETE(request, { params }) {
     
     const { id } = params;
     await prisma.product.delete({ where: { id } });
-    return new NextResponse(null, { status: 204 }); // 204 No Content is standard for a successful delete
+    return new NextResponse(null, { status: 204 }); 
 
   } catch (error) {
     console.error("Failed to delete product:", error);

@@ -1,20 +1,15 @@
-// src/components/ProductModal.jsx
 'use client';
 
 import { useState, useEffect } from 'react';
 
 export default function ProductModal({ product, onClose, onSave }) {
-  // 1. Manage form data with a single state object
   const [formData, setFormData] = useState({
     name: '',
     price: '',
     stock: '',
   });
-  // 2. Manage error messages with a separate state object
   const [errors, setErrors] = useState({});
 
-  // When the 'product' prop changes (i.e., when opening the modal),
-  // update the form data to reflect the product being edited or reset for a new one.
   useEffect(() => {
     if (product) {
       setFormData({
@@ -25,16 +20,14 @@ export default function ProductModal({ product, onClose, onSave }) {
     } else {
       setFormData({ name: '', price: '', stock: '' });
     }
-    setErrors({}); // Clear any previous errors when modal opens
+    setErrors({}); 
   }, [product]);
 
-  // Update state as the user types
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
   
-  // A function to validate the form data before submission
   const validateForm = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Product name is required';
@@ -44,14 +37,11 @@ export default function ProductModal({ product, onClose, onSave }) {
     else if (parseInt(formData.stock, 10) < 0) newErrors.stock = 'Stock cannot be negative';
     
     setErrors(newErrors);
-    // Return true if there are no errors, false otherwise
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle the form submission
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Only call the onSave function if the form is valid
     if (validateForm()) {
       const productData = {
         ...formData,

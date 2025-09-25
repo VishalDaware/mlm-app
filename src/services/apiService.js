@@ -1,4 +1,3 @@
-// src/services/apiService.js
 import toast from 'react-hot-toast';
 
 // --- Helper to handle API responses ---
@@ -27,17 +26,17 @@ export const login = (credentials) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(credentials),
-    credentials: 'include' // 🔑 ensures cookie gets stored
+    credentials: 'include' 
   })
     .then(handleResponse)
     .then((data) => {
-      return data; // no need to store token manually
+      return data; 
     });
 };
 
 export const checkAuthStatus = () => {
   return fetch('/api/auth/me', {
-    credentials: 'include' // 🔑 cookie auto-sent
+    credentials: 'include' 
   }).then(res => {
     if (!res.ok) return null;
     return res.json();
@@ -98,6 +97,12 @@ export const getHierarchy = (userId) => {
   }).then(handleResponse);
 };
 
+export const getUsers = () => {
+  return fetch(`/api/users`, {
+    credentials: 'include'
+  }).then(handleResponse);
+};
+
 // --- Sales ---
 export const createSale = (saleData) => {
   return fetch('/api/sales', {
@@ -110,6 +115,12 @@ export const createSale = (saleData) => {
 
 export const getSalesForUser = (userId) => {
   return fetch(`/api/sales/user/${userId}`, {
+    credentials: 'include'
+  }).then(handleResponse);
+};
+
+export const getSales = () => {
+  return fetch(`/api/sales`, {
     credentials: 'include'
   }).then(handleResponse);
 };

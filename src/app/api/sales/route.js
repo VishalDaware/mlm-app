@@ -1,28 +1,54 @@
 // src/app/api/sales/route.js
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+// ADD THESE TWO LINES
+import { cookies } from 'next/headers';
+import { jwtVerify } from 'jose';
+
+async function getUserFromToken() {
+  const token = cookies().get('token')?.value;
+  if (!token) return null;
+  try {
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+export async function GET(request) {
+  try {
+    const user = await getUserFromToken();
+    if (!user || user.role !== 'Admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    const sales = await prisma.sale.findMany();
+    return NextResponse.json(sales);
+  } catch (error) {
+    console.error("Failed to fetch sales:", error);
+    return NextResponse.json({ error: 'Failed to fetch sales' }, { status: 500 });
+  }
+}
 
 export async function POST(request) {
   const { productId, quantity, sellerId } = await request.json();
   
   const product = await prisma.product.findUnique({ where: { id: productId } });
   
-  // Find the seller to get their role and uplineId
   const seller = await prisma.user.findUnique({ where: { id: sellerId } });
 
   if (!product || !seller || product.stock < quantity) {
     return NextResponse.json({ error: 'Product not available or insufficient stock' }, { status: 400 });
   }
 
-  // Define commission rates
   const totalAmount = product.price * quantity;
-  const sellerCommissionRate = seller.role === 'Dealer' ? 0.10 : 0.15; // 10% for Dealers, 15% for Distributors
-  const uplineCommissionRate = 0.05; // 5% for the upline
+  const sellerCommissionRate = seller.role === 'Dealer' ? 0.10 : 0.15;
+  const uplineCommissionRate = 0.05;
 
   const sellerCommission = totalAmount * sellerCommissionRate;
   const uplineCommission = seller.uplineId ? totalAmount * uplineCommissionRate : 0;
 
-  // Use a transaction to update stock and create the sale together
   const [, newSale] = await prisma.$transaction([
     prisma.product.update({
       where: { id: productId },
@@ -32,7 +58,7 @@ export async function POST(request) {
       data: {
         productId,
         sellerId,
-        uplineId: seller.uplineId, // The crucial change is here
+        uplineId: seller.uplineId, 
         quantity,
         totalAmount,
         sellerCommission,

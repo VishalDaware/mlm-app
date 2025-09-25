@@ -1,4 +1,3 @@
-// src/app/dashboard/farmer/page.jsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -55,7 +54,7 @@ export default function FarmerDashboard() {
     try {
       await createSale({ sellerId: user.uplineId, productId, quantity: parseInt(quantity) });
       toast.success('Purchase successful!');
-      fetchProducts(); // Re-fetch products to update stock
+      fetchProducts(); 
       return true;
     } catch (error) {
       console.error("Purchase failed:", error);
@@ -89,7 +88,6 @@ export default function FarmerDashboard() {
   );
 }
 
-// ProductCard sub-component with its own submitting state
 function ProductCard({ product, onPurchase }) {
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -97,7 +95,6 @@ function ProductCard({ product, onPurchase }) {
   const handleBuyClick = async () => {
     setIsSubmitting(true);
     const success = await onPurchase(product.id, quantity);
-    // Only reset quantity if purchase was successful
     if (success) {
       setQuantity(1);
     }

@@ -1,4 +1,3 @@
-// src/app/api/users/[userId]/downline/route.js
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 

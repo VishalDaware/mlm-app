@@ -1,10 +1,9 @@
-// src/app/page.jsx
 'use client';
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-import Spinner from '@/components/Spinner'; // Local spinner
+import Spinner from '@/components/Spinner'; 
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,28 +13,25 @@ export default function LoginPage() {
   const [adminPassword, setAdminPassword] = useState('password');
   const [role, setRole] = useState('Distributor');
   const [userId, setUserId] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false); // State to handle loading
+  const [isSubmitting, setIsSubmitting] = useState(false); 
 
   const handleAdminLogin = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // Call the new login function from the store, which calls the API
       const user = await login({ 
         userId: adminEmail, 
         password: adminPassword, 
         role: 'Admin' 
       });
 
-      // If login is successful and returns a user, redirect
       if (user) {
         router.push('/dashboard/admin');
       }
     } catch (error) {
-      // Error toast is already handled by the apiService, so we just log it
       console.error('Admin login failed');
     } finally {
-      setIsSubmitting(false); // Stop loading spinner
+      setIsSubmitting(false); 
     }
   };
 
@@ -43,10 +39,9 @@ export default function LoginPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // Call the new login function from the store for other roles
       const user = await login({ 
         userId, 
-        password: 'password', // Using default password as planned
+        password: 'password', 
         role 
       });
 
@@ -68,7 +63,6 @@ export default function LoginPage() {
 
         <h1 className="text-4xl font-bold mb-8 text-center text-gray-800">Welcome</h1>
 
-        {/* Admin Login Form */}
         <div className="mb-8">
           <form onSubmit={handleAdminLogin}>
             <label className="block mb-2 font-semibold text-gray-600">Log in as Admin</label>
@@ -94,14 +88,12 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Divider */}
         <div className="flex items-center my-8">
           <div className="flex-grow border-t border-gray-300"></div>
           <span className="flex-shrink mx-4 text-gray-500">OR</span>
           <div className="flex-grow border-t border-gray-300"></div>
         </div>
 
-        {/* User Login Form */}
         <div>
           <form onSubmit={handleUserLogin}>
             <label className="block mb-2 font-semibold text-gray-600">Log in as</label>

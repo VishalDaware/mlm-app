@@ -1,17 +1,15 @@
-// src/components/admin/AddNewUser.jsx
 'use client';
 
 import { useState } from 'react';
-import { addUser } from '@/services/apiService'; // 1. Import from the new apiService
+import { addUser } from '@/services/apiService'; 
 import toast from 'react-hot-toast';
 import Spinner from '@/components/Spinner';
 
 export default function AddNewUser() {
   const [name, setName] = useState('');
   const [role, setRole] = useState('Distributor');
-  const [isSubmitting, setIsSubmitting] = useState(false); // For button loading state
+  const [isSubmitting, setIsSubmitting] = useState(false); 
 
-  // 2. Convert the handler to an async function
   const handleCreateUser = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
@@ -25,19 +23,16 @@ export default function AddNewUser() {
       const newUser = {
         name,
         role,
-        uplineId: 'admin', // The admin is the top-level upline
+        uplineId: 'admin', 
       };
 
-      // 3. Call the new API function
       const createdUser = await addUser(newUser);
 
       toast.success(`User "${createdUser.name}" created! ID: ${createdUser.userId}`);
       
-      // Reset form
       setName('');
       setRole('Distributor');
     } catch (error) {
-      // Error toast is already handled by the apiService
       console.error("Failed to create user:", error);
     } finally {
       setIsSubmitting(false);
@@ -71,7 +66,6 @@ export default function AddNewUser() {
             <option value="Farmer">Farmer</option>
           </select>
         </div>
-        {/* 4. Update button to handle the submitting state */}
         <button
           type="submit"
           disabled={isSubmitting}

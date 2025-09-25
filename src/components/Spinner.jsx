@@ -1,4 +1,3 @@
-// src/components/Spinner.jsx
 'use client';
 
 export default function Spinner({ size = 24, color = '#ffffff' }) {

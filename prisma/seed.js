@@ -1,4 +1,3 @@
-// prisma/seed.js
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
@@ -10,7 +9,6 @@ async function main() {
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash('password', salt);
 
-  // Create Admin
   const admin = await prisma.user.upsert({
     where: { userId: 'admin' },
     update: {
@@ -26,7 +24,6 @@ async function main() {
     },
   });
 
-  // Create Distributor
   const distributor = await prisma.user.upsert({
     where: { userId: 'DIS3309' },
     update: {
@@ -44,7 +41,6 @@ async function main() {
     },
   });
 
-  // Create Dealers under the Distributor
   const dealer1 = await prisma.user.upsert({
     where: { userId: 'DLR789' },
     update: {
@@ -87,7 +83,7 @@ async function main() {
       name: 'Aditya',
       password: hashedPassword,
       role: 'Farmer',
-      uplineId: dealer1.id, // Linked to Dealer 'Rohan'
+      uplineId: dealer1.id, 
     },
   });
   

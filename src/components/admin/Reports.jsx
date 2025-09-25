@@ -1,4 +1,3 @@
-// src/components/admin/Reports.jsx
 'use client';
 
 import { useState } from 'react';
@@ -13,7 +12,6 @@ export default function Reports() {
   ];
 
   return (
-    // Added a subtle shadow to the main card
     <div className="bg-white p-6 rounded-lg shadow-lg">
       <h2 className="text-2xl font-semibold text-gray-700 mb-4">Reports</h2>
       <div className="flex flex-wrap gap-2 mb-6 border-b pb-4">
@@ -21,10 +19,9 @@ export default function Reports() {
           <button
             key={report}
             onClick={() => setActiveReport(report)}
-            // Updated button colors to match the theme
             className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
               activeReport === report
-                ? 'bg-green-600 text-white' // Changed from teal
+                ? 'bg-green-600 text-white' 
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >

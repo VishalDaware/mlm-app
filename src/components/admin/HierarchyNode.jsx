@@ -1,4 +1,3 @@
-// src/components/admin/HierarchyNode.jsx
 
 export default function HierarchyNode({ user }) {
   return (
@@ -6,7 +5,6 @@ export default function HierarchyNode({ user }) {
       <div className="py-2">
         <div className="bg-green-50 border border-green-200 p-3 rounded-md inline-block">
           <p className="font-bold text-green-900">{user.name}</p>
-          {/* Changed text-green-700 to text-gray-600 for better contrast */}
           <p className="text-sm text-black">{user.userId} ({user.role})</p>
         </div>
       </div>

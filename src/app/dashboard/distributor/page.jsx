@@ -1,4 +1,3 @@
-// src/app/dashboard/distributor/page.jsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -70,7 +69,7 @@ export default function DistributorDashboard() {
       await addUser({ name: newDealerName, role: 'Dealer', uplineId: user.id });
       setNewDealerName('');
       toast.success(`Dealer "${newDealerName}" added successfully!`);
-      fetchData(); // Refresh all data
+      fetchData(); 
     } catch (error) {
       console.error("Failed to add dealer:", error);
     }
@@ -84,7 +83,7 @@ export default function DistributorDashboard() {
       toast.success('Sale completed successfully!');
       setSaleProduct('');
       setSaleQuantity(1);
-      fetchData(); // Refresh all data
+      fetchData(); 
     } catch (error) {
       console.error("Failed to make sale:", error);
     }

@@ -1,4 +1,3 @@
-// src/components/admin/ProductManagement.jsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -13,21 +12,18 @@ export default function ProductManagement() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Use useCallback to create a stable function for fetching data
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await getProducts();
       setProducts(data);
     } catch (error) {
-      // Error toast is already handled in apiService
       console.error("Failed to fetch products:", error);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Fetch products on initial component mount
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
@@ -52,7 +48,7 @@ export default function ProductManagement() {
         toast.success('Product added successfully!');
       }
       handleCloseModal();
-      fetchProducts(); // Re-fetch products to show the latest data
+      fetchProducts(); 
     } catch (error) {
       console.error("Failed to save product:", error);
     }
@@ -63,7 +59,7 @@ export default function ProductManagement() {
       try {
         await deleteProduct(productId);
         toast.success('Product deleted successfully!');
-        fetchProducts(); // Re-fetch products to show the latest data
+        fetchProducts(); 
       } catch (error) {
         console.error("Failed to delete product:", error);
       }

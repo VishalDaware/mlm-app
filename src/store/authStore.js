@@ -1,4 +1,3 @@
-// src/store/authStore.js
 import { create } from 'zustand';
 import { login as apiLogin, checkAuthStatus } from '@/services/apiService';
 import { useRouter } from 'next/navigation';
@@ -18,7 +17,6 @@ export const useAuthStore = create((set) => ({
   },
 
   logout: () => {
-    // We'll need a logout API later, for now just clear state
     set({ user: null });
   },
   

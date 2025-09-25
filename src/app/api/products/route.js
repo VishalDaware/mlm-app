@@ -1,10 +1,8 @@
-// src/app/api/products/route.js
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 
-// ✅ helper to get user from JWT
 async function getUserFromToken() {
   const token = cookies().get('token')?.value;
   if (!token) return null;
@@ -12,13 +10,12 @@ async function getUserFromToken() {
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
-    return payload; // { id, userId, role }
+    return payload;
   } catch {
     return null;
   }
 }
 
-// GET all products
 export async function GET() {
   try {
     const products = await prisma.product.findMany({
@@ -31,7 +28,6 @@ export async function GET() {
   }
 }
 
-// POST a new product (Admin only)
 export async function POST(request) {
   try {
     const userPayload = await getUserFromToken();

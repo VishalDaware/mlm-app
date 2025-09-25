@@ -1,4 +1,3 @@
-// src/app/dashboard/admin/page.jsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,10 +8,7 @@ import Reports from '@/components/admin/Reports';
 import ProductManagement from '@/components/admin/ProductManagement';
 import HierarchyView from '@/components/admin/HierarchyView';
 import AddNewUser from '@/components/admin/AddNewUser';
-
-// Placeholder for Analytics
-const Analytics = () => <div className="bg-white p-6 rounded-lg shadow-lg"><h2 className="text-2xl font-semibold">Analytics & Overview</h2></div>;
-
+import Analytics from '@/components/admin/Analytics'; 
 
 const TABS = {
   REPORTS: 'Reports',
@@ -45,8 +41,7 @@ export default function AdminDashboard() {
       case TABS.PRODUCTS:
         return <ProductManagement />;
       case TABS.ANALYTICS:
-        // For now, we'll use the placeholder until the bug is fixed.
-        return <Analytics />;
+        return <Analytics />; 
       case TABS.HIERARCHY:
         return <HierarchyView />;
       case TABS.ADD_USER:
@@ -61,19 +56,21 @@ export default function AdminDashboard() {
   }
 
   return (
-    // Changed background to a warmer, earthy tone
     <div className="min-h-screen bg-stone-50">
-      {/* Header changed to a deep, natural green */}
+      {/* Header */}
       <header className="bg-green-900 text-white shadow-md">
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold">Admin Control Panel</h1>
-          <button onClick={handleLogout} className="px-4 py-2 bg-green-800 rounded-md hover:bg-green-700 text-sm transition-colors">
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-green-800 rounded-md hover:bg-green-700 text-sm transition-colors"
+          >
             Log Out
           </button>
         </div>
       </header>
 
-      {/* Tab Navigation with updated active color */}
+      {/* Navigation */}
       <nav className="bg-white shadow-sm">
         <div className="container mx-auto px-6">
           <div className="flex gap-1">
@@ -83,8 +80,8 @@ export default function AdminDashboard() {
                 onClick={() => setActiveTab(tab)}
                 className={`py-4 px-6 font-semibold text-sm transition-colors ${
                   activeTab === tab
-                    ? 'border-b-2 border-green-600 text-green-600' // Changed to green
-                    : 'text-gray-600 hover:text-green-500' // Changed hover color
+                    ? 'border-b-2 border-green-600 text-green-600'
+                    : 'text-gray-600 hover:text-green-500'
                 }`}
               >
                 {tab}
@@ -95,9 +92,7 @@ export default function AdminDashboard() {
       </nav>
 
       {/* Main Content */}
-      <main className="container mx-auto p-6">
-        {renderContent()}
-      </main>
+      <main className="container mx-auto p-6">{renderContent()}</main>
     </div>
   );
 }

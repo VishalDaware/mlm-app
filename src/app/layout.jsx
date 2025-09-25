@@ -1,7 +1,6 @@
-// src/app/layout.jsx
 import './globals.css';
 import DatabaseInitializer from '@/components/DatabaseInitializer';
-import { Toaster } from 'react-hot-toast'; // 1. Import Toaster
+import { Toaster } from 'react-hot-toast'; 
 
 export const metadata = {
   title: 'MLM App',
@@ -12,7 +11,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <Toaster position="top-center" reverseOrder={false} /> {/* 2. Add the Toaster component here */}
+        <Toaster position="top-center" reverseOrder={false} />
         <DatabaseInitializer />
         {children}
       </body>

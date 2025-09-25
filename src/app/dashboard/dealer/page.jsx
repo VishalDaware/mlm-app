@@ -1,4 +1,3 @@
-// src/app/dashboard/dealer/page.jsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -29,7 +28,6 @@ export default function DealerDashboard() {
           getSalesForUser(user.userId),
         ]);
         setProducts(productData);
-        // Filter sales to only show those where the current user was the direct seller
         setSales(salesData.filter(s => s.sellerId === user.id));
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
@@ -62,7 +60,7 @@ export default function DealerDashboard() {
       toast.success('Sale completed successfully!');
       setSaleProduct('');
       setSaleQuantity(1);
-      fetchData(); // Refresh all data
+      fetchData(); 
     } catch (error) {
       console.error("Failed to make sale:", error);
     }

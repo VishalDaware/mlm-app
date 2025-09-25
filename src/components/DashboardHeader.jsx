@@ -1,4 +1,3 @@
-// src/components/DashboardHeader.jsx
 'use client';
 
 export default function DashboardHeader({ title, userName, onLogout }) {

@@ -1,4 +1,3 @@
-// middleware.js
 import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 
@@ -12,10 +11,8 @@ export async function middleware(request) {
   }
 
   try {
-    // Verify the token
     const { payload } = await jwtVerify(token, secret);
 
-    // Attach the user payload to the request headers
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('X-User-Payload', JSON.stringify(payload));
 
@@ -29,12 +26,11 @@ export async function middleware(request) {
   }
 }
 
-// middleware.js
 export const config = {
   matcher: [
     '/api/auth/me',
-    '/api/products',          // For POST requests
-    '/api/products/:path*',   // For PUT, DELETE requests
+    '/api/products',          
+    '/api/products/:path*',  
     '/api/sales',
     '/api/sales/:path*',
     '/api/users',

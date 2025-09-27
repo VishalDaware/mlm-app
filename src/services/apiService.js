@@ -103,6 +103,7 @@ export const getUsers = () => {
   }).then(handleResponse);
 };
 
+
 // --- Sales ---
 export const createSale = (saleData) => {
   return fetch('/api/sales', {
@@ -132,14 +133,10 @@ export const getUsersByRole = (role) => {
 };
 
 // --- Payouts ---
-// NEW: Function to get all pending payouts for the admin
 export const getPendingPayouts = () => {
-  return fetch(`/api/payouts/pending`, {
-    credentials: 'include'
-  }).then(handleResponse);
+  return fetch(`/api/payouts/pending`).then(handleResponse);
 };
 
-// NEW: Function to create a new payout record
 export const createPayout = (payoutData) => {
   return fetch(`/api/payouts`, {
     method: 'POST',
@@ -153,4 +150,17 @@ export const getPendingPayoutForUser = (userId) => {
   return fetch(`/api/payouts/user/${userId}`, {
     credentials: 'include'
   }).then(handleResponse);
+};
+
+
+// --- Inventory ---
+// CORRECTED: This function now fetches the logged-in user's inventory correctly.
+export const getUserInventory = () => {
+  return fetch(`/api/inventory`, { // No longer needs a userId
+    credentials: 'include'
+  }).then(handleResponse);
+};
+
+export const getAdminInventory = () => {
+  return fetch(`/api/inventory/admin`).then(handleResponse);
 };

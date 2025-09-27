@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { getProducts, createSale } from '@/services/apiService';
 import DashboardHeader from '@/components/DashboardHeader';
 import toast from 'react-hot-toast';
-import Spinner from '@/components/Spinner';
+import { ThreeDots } from 'react-loader-spinner';
 
 export default function FarmerDashboard() {
   const router = useRouter();
@@ -15,6 +15,7 @@ export default function FarmerDashboard() {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Fetches all products available in the system
   const fetchProducts = useCallback(async () => {
     try {
       const data = await getProducts();
@@ -42,6 +43,7 @@ export default function FarmerDashboard() {
     router.push('/');
   };
 
+  // This function now creates a transaction
   const handlePurchase = async (productId, quantity) => {
     if (!user || !user.uplineId) {
       toast.error("Error: Your account is not linked to a dealer.");
@@ -52,12 +54,21 @@ export default function FarmerDashboard() {
       return false;
     }
     try {
-      await createSale({ sellerId: user.uplineId, productId, quantity: parseInt(quantity) });
+      // THE KEY CHANGE:
+      // We create a transaction where the Farmer is the buyer
+      // and their assigned Dealer (upline) is the seller.
+      await createSale({ 
+        buyerId: user.id,
+        sellerId: user.uplineId, 
+        productId, 
+        quantity: parseInt(quantity) 
+      });
       toast.success('Purchase successful!');
-      fetchProducts(); 
+      fetchProducts(); // Re-fetch to show updated stock (if any)
       return true;
     } catch (error) {
       console.error("Purchase failed:", error);
+      // The apiService already shows a toast on failure
       return false;
     }
   };
@@ -65,7 +76,7 @@ export default function FarmerDashboard() {
   if (!user || isLoading) {
     return (
       <div className="flex justify-center items-center h-screen bg-stone-50">
-        <Spinner size={100} color="#166534" />
+        <ThreeDots color="#166534" height={100} width={100} />
       </div>
     );
   }
@@ -88,6 +99,7 @@ export default function FarmerDashboard() {
   );
 }
 
+// Updated ProductCard component
 function ProductCard({ product, onPurchase }) {
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,7 +108,7 @@ function ProductCard({ product, onPurchase }) {
     setIsSubmitting(true);
     const success = await onPurchase(product.id, quantity);
     if (success) {
-      setQuantity(1);
+      setQuantity(1); // Reset quantity only on successful purchase
     }
     setIsSubmitting(false);
   };
@@ -110,10 +122,12 @@ function ProductCard({ product, onPurchase }) {
           </div>
           <div>
             <h3 className="text-lg font-bold text-gray-800 leading-tight">{product.name}</h3>
-            <p className="text-sm text-stone-500 mt-1">Stock: {product.stock}</p>
+             {/* Note: This shows total system stock, not the dealer's specific stock.
+                 The backend will prevent a sale if the dealer is out of stock. */}
           </div>
         </div>
-        <p className="text-2xl text-green-600 font-bold my-4">₹{product.price.toFixed(2)}</p>
+        {/* THE KEY CHANGE: Displaying the correct farmerPrice */}
+        <p className="text-2xl text-green-600 font-bold my-4">₹{product.farmerPrice.toFixed(2)}</p>
       </div>
 
       <div className="mt-auto p-4 border-t border-stone-200 bg-stone-50 rounded-b-lg">
@@ -122,17 +136,16 @@ function ProductCard({ product, onPurchase }) {
             type="number"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
-            className="w-20 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-20 p-2 border border-gray-300 rounded-md"
             min="1"
-            max={product.stock}
             disabled={isSubmitting}
           />
           <button
             onClick={handleBuyClick}
-            className="w-full h-10 flex justify-center items-center px-4 py-2 bg-green-600 text-white font-bold rounded-md hover:bg-green-700 transition-colors disabled:bg-green-400 disabled:cursor-not-allowed"
-            disabled={product.stock < 1 || isSubmitting}
+            className="w-full h-10 flex justify-center items-center px-4 py-2 bg-green-600 text-white font-bold rounded-md hover:bg-green-700 disabled:bg-gray-400"
+            disabled={isSubmitting}
           >
-            {isSubmitting ? <Spinner size={20} color="#FFF" /> : (product.stock > 0 ? 'Buy Now' : 'Out of Stock')}
+            {isSubmitting ? <ThreeDots color="#FFF" height={20} width={40} /> : 'Buy Now'}
           </button>
         </div>
       </div>

@@ -1,15 +1,34 @@
-// src/components/admin/PayoutsView.jsx
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getPendingPayouts, createPayout } from '@/services/apiService';
+import { getPendingPayouts, createPayout } from '../../services/apiService';
 import toast from 'react-hot-toast';
-import { ThreeDots } from 'react-loader-spinner';
+
+// Simple inline SVG loader to remove dependency
+const Loader = () => (
+  <svg width="80" height="80" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="#166534">
+    <g fill="none" fillRule="evenodd">
+      <g transform="translate(1 1)" strokeWidth="2">
+        <circle strokeOpacity=".5" cx="18" cy="18" r="18"/>
+        <path d="M36 18c0-9.94-8.06-18-18-18">
+          <animateTransform
+            attributeName="transform"
+            type="rotate"
+            from="0 18 18"
+            to="360 18 18"
+            dur="1s"
+            repeatCount="indefinite"/>
+        </path>
+      </g>
+    </g>
+  </svg>
+);
+
 
 export default function PayoutsView() {
   const [payouts, setPayouts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState('All'); // 'All', 'Distributor', 'Dealer'
+  const [filter, setFilter] = useState('All');
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -29,13 +48,17 @@ export default function PayoutsView() {
   }, [fetchData]);
 
   const handlePay = async (userToPay) => {
-    if (window.confirm(`Are you sure you want to pay ₹${userToPay.pendingBalance.toFixed(2)} to ${userToPay.name}?`)) {
+    // Replaced window.confirm with a less intrusive custom modal logic if available,
+    // but for now, we'll keep it simple. In a real app, a modal component would be better.
+    const isConfirmed = confirm(`Are you sure you want to pay ₹${userToPay.pendingBalance.toFixed(2)} to ${userToPay.name}?`);
+    if (isConfirmed) {
       try {
         await createPayout({ userId: userToPay.id, amount: userToPay.pendingBalance });
         toast.success('Payment recorded successfully!');
         fetchData(); // Refresh the list
       } catch (error) {
         console.error("Failed to record payment:", error);
+        toast.error("Failed to record payment.");
       }
     }
   };
@@ -50,23 +73,25 @@ export default function PayoutsView() {
       <h2 className="text-2xl font-semibold text-gray-700 mb-4">Pending Payouts</h2>
 
       {/* Filter Buttons */}
-      <div className="flex gap-2 mb-6 border-b pb-4">
-        {['All', 'Distributor', 'Dealer'].map(role => (
+      <div className="flex flex-wrap gap-2 mb-6 border-b pb-4">
+        {/* UPDATED: Added all the required roles to the filter array */}
+        {['All', 'Franchise', 'Distributor', 'Sub-Distributor', 'Dealer'].map(role => (
           <button
             key={role}
             onClick={() => setFilter(role)}
             className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-              filter === role ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              filter === role ? 'bg-green-600 text-white shadow' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
-            {role}s
+            {/* Simple pluralization for display */}
+            {role === 'All' ? role : `${role}s`}
           </button>
         ))}
       </div>
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
-          <ThreeDots color="#166534" height={80} width={80} />
+          <Loader />
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -100,7 +125,7 @@ export default function PayoutsView() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="p-4 text-center text-gray-500">No pending payouts found.</td>
+                  <td colSpan="5" className="p-4 text-center text-gray-500">No pending payouts found for this filter.</td>
                 </tr>
               )}
             </tbody>
@@ -110,3 +135,4 @@ export default function PayoutsView() {
     </div>
   );
 }
+

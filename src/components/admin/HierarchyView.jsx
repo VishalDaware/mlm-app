@@ -49,7 +49,7 @@ export default function HierarchyView() {
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Enter Distributor or Dealer ID"
+                placeholder="Enter User ID "
                 className="w-full p-2 border border-gray-300 rounded-md"
               />
             </div>

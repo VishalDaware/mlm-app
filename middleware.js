@@ -4,6 +4,18 @@ import { jwtVerify } from 'jose';
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export async function middleware(request) {
+  const { pathname } = request.nextUrl;
+  const method = request.method;
+
+  // ✅ Allow GET requests to /api/products (public)
+  if (
+    pathname.startsWith('/api/products') &&
+    method === 'GET'
+  ) {
+    return NextResponse.next();
+  }
+
+  // 🔒 All other matched routes require authentication
   const token = request.cookies.get('token')?.value;
 
   if (!token) {
@@ -13,6 +25,7 @@ export async function middleware(request) {
   try {
     const { payload } = await jwtVerify(token, secret);
 
+    // Pass the user payload through headers if needed
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('X-User-Payload', JSON.stringify(payload));
 
@@ -26,10 +39,11 @@ export async function middleware(request) {
   }
 }
 
+// ✅ Config: still match all your API routes
 export const config = {
   matcher: [
     '/api/auth/me',
-    '/api/products',          
+    '/api/products',          // still matched, but GET is allowed by code above
     '/api/products/:path*',  
     '/api/sales',
     '/api/sales/:path*',

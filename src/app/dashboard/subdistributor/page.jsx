@@ -24,8 +24,7 @@ const Loader = () => (
     </div>
 );
 
-
-export default function DistributorDashboard() {
+export default function SubDistributorDashboard() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
 
@@ -39,7 +38,7 @@ export default function DistributorDashboard() {
   const [sellProductId, setSellProductId] = useState('');
   const [sellQuantity, setSellQuantity] = useState(1);
   const [sellTo, setSellTo] = useState('');
-  const [newSubDistributorName, setNewSubDistributorName] = useState('');
+  const [newDealerName, setNewDealerName] = useState('');
   
   const selectedProductInStock = inventory.find(item => item.productId === sellProductId)?.quantity || 0;
 
@@ -71,7 +70,7 @@ export default function DistributorDashboard() {
   }, [user, fetchData]);
 
   const handleLogout = () => { logout(); router.push('/'); };
-  useEffect(() => { if (user && user.role !== 'Distributor') router.push('/'); }, [user, router]);
+  useEffect(() => { if (user && user.role !== 'SubDistributor') router.push('/'); }, [user, router]);
   
   const handleSell = async (e) => {
     e.preventDefault();
@@ -90,15 +89,15 @@ export default function DistributorDashboard() {
     }
   };
   
-  const handleAddSubDistributor = async (e) => {
+  const handleAddDealer = async (e) => {
     e.preventDefault();
-    if (!newSubDistributorName.trim()) return;
+    if (!newDealerName.trim()) return;
     try {
-      await addUser({ name: newSubDistributorName, role: 'SubDistributor', uplineId: user.id });
-      setNewSubDistributorName('');
-      toast.success(`Sub-Distributor added!`);
+      await addUser({ name: newDealerName, role: 'Dealer', uplineId: user.id });
+      setNewDealerName('');
+      toast.success(`Dealer added!`);
       fetchData();
-    } catch (error) { toast.error('Failed to add sub-distributor.'); }
+    } catch (error) { toast.error('Failed to add dealer.'); }
   };
 
   if (!user || isLoading) {
@@ -107,13 +106,13 @@ export default function DistributorDashboard() {
 
   return (
     <div className="min-h-screen bg-stone-50">
-      <DashboardHeader title="Distributor Dashboard" userName={user.name} onLogout={handleLogout} />
+      <DashboardHeader title="Sub-Distributor Dashboard" userName={user.name} onLogout={handleLogout} />
       <main className="container mx-auto p-6 space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 flex flex-col gap-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Pending Payout</h3><p className="text-4xl font-bold text-red-600 mt-2">₹{analytics.pending.toFixed(2)}</p></div>
-              <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Team Size</h3><p className="text-4xl font-bold text-teal-600 mt-2">{analytics.teamSize}</p></div>
+              <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Team Size (Dealers)</h3><p className="text-4xl font-bold text-teal-600 mt-2">{analytics.teamSize}</p></div>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-lg">
               <h2 className="text-2xl font-semibold text-gray-700 mb-4">Your Inventory</h2>
@@ -131,7 +130,7 @@ export default function DistributorDashboard() {
           </div>
           <div className="flex flex-col gap-8">
             <div className="bg-white p-6 rounded-lg shadow-lg">
-              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Sell to Sub-Distributor</h2>
+              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Sell to Dealer</h2>
               <form onSubmit={handleSell} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium">Product</label>
@@ -147,7 +146,7 @@ export default function DistributorDashboard() {
                 <div>
                   <label className="block text-sm font-medium">Sell To</label>
                   <select value={sellTo} onChange={(e) => setSellTo(e.target.value)} className="w-full mt-1 p-2 border rounded-md">
-                    <option value="">Select Sub-Distributor</option>
+                    <option value="">Select Dealer</option>
                     {downline.map(d => <option key={d.id} value={d.id}>{d.name} ({d.userId})</option>)}
                   </select>
                 </div>
@@ -155,11 +154,11 @@ export default function DistributorDashboard() {
               </form>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-lg">
-              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Recruit Sub-Distributor</h2>
-              <form onSubmit={handleAddSubDistributor}>
-                <label className="block text-sm font-medium">Sub-Distributor Name</label>
-                <input type="text" value={newSubDistributorName} onChange={(e) => setNewSubDistributorName(e.target.value)} className="w-full mt-1 p-2 border rounded-md" />
-                <button type="submit" className="w-full mt-4 py-2 bg-teal-600 text-white font-bold rounded-md">Add Sub-Distributor</button>
+              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Recruit Dealer</h2>
+              <form onSubmit={handleAddDealer}>
+                <label className="block text-sm font-medium">Dealer Name</label>
+                <input type="text" value={newDealerName} onChange={(e) => setNewDealerName(e.target.value)} className="w-full mt-1 p-2 border rounded-md" />
+                <button type="submit" className="w-full mt-4 py-2 bg-teal-600 text-white font-bold rounded-md">Add Dealer</button>
               </form>
             </div>
           </div>
@@ -178,4 +177,3 @@ export default function DistributorDashboard() {
     </div>
   );
 }
-

@@ -6,41 +6,45 @@ export async function GET(request, { params }) {
   try {
     const { userId } = params;
 
+    // 1. Find the user by their public userId to get their internal database ID
     const user = await prisma.user.findUnique({
       where: { userId: userId },
-      select: { id: true },
+      select: { id: true }, // We only need the ID for the next queries
     });
 
+    // If the user doesn't exist, it's a 404 error, not a server crash
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Fetch sales and payouts in parallel
-    const [sales, payouts] = await Promise.all([
-      prisma.sale.findMany({
-        where: { OR: [{ sellerId: user.id }, { uplineId: user.id }] },
+    // 2. Fetch all transactions where this user was the seller, and all their payouts
+    // Using Promise.all is more efficient as it runs both queries at the same time
+    const [transactions, payouts] = await Promise.all([
+      prisma.transaction.findMany({
+        where: { sellerId: user.id },
+        select: { profit: true }, // We only need the profit from each transaction
       }),
       prisma.payout.findMany({
         where: { userId: user.id },
+        select: { amount: true }, // We only need the amount from each payout
       }),
     ]);
 
-    // Calculate total earnings
-    const totalEarnings = sales.reduce((acc, sale) => {
-      if (sale.sellerId === user.id) return acc + sale.sellerCommission;
-      if (sale.uplineId === user.id) return acc + sale.uplineCommission;
-      return acc;
-    }, 0);
+    // 3. Calculate the total profit earned by summing up the profit from all transactions
+    const totalProfit = transactions.reduce((acc, transaction) => acc + transaction.profit, 0);
 
-    // Calculate total paid
+    // 4. Calculate the total amount already paid out
     const totalPaid = payouts.reduce((acc, payout) => acc + payout.amount, 0);
 
-    const pendingBalance = totalEarnings - totalPaid;
+    // 5. The pending balance is the difference
+    const pendingBalance = totalProfit - totalPaid;
 
+    // 6. Return the result in a clean JSON object
     return NextResponse.json({ pendingBalance });
 
   } catch (error) {
-    console.error("Failed to fetch pending payout:", error);
-    return NextResponse.json({ error: 'Failed to fetch pending payout' }, { status: 500 });
+    // This will catch any unexpected database errors and prevent the server from crashing
+    console.error("Failed to fetch pending payout for user:", error);
+    return NextResponse.json({ error: 'Failed to fetch pending payout data' }, { status: 500 });
   }
 }

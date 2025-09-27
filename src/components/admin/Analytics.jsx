@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getSales, getUsers } from '@/services/apiService';
+import { ThreeDots } from 'react-loader-spinner';
 
 const StatCard = ({ title, value, colorClass }) => (
   <div className={`p-6 rounded-lg shadow-lg ${colorClass}`}>
@@ -12,6 +13,7 @@ const StatCard = ({ title, value, colorClass }) => (
 
 export default function Analytics() {
   const [stats, setStats] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -21,79 +23,59 @@ export default function Analytics() {
           getUsers(),
         ]);
 
-        console.log("Sales Data:", salesData);
-        console.log("Users Data:", usersData);
-
-        const totalSales = Array.isArray(salesData)
-          ? salesData.reduce((acc, sale) => acc + (sale.totalAmount || 0), 0)
-          : 0;
-
-        const totalCommission = Array.isArray(salesData)
-          ? salesData.reduce(
-              (acc, sale) =>
-                acc +
-                ((sale.sellerCommission || 0) +
-                  (sale.uplineCommission || 0)),
-              0
-            )
-          : 0;
-
-        const activeUsers = Array.isArray(usersData) ? usersData.length : 0;
+        const totalSales = salesData.reduce((acc, sale) => acc + sale.totalAmount, 0);
+        // THE FIX: Calculate total PROFIT from transactions, not commission
+        const totalProfit = salesData.reduce((acc, sale) => acc + sale.profit, 0);
+        const activeUsers = usersData.length;
 
         setStats({
           totalSalesValue: totalSales,
-          totalCommissionValue: totalCommission,
+          totalProfitValue: totalProfit,
           activeUsersCount: activeUsers,
         });
       } catch (err) {
         console.error('Failed to fetch analytics data', err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchStats();
   }, []);
 
-  if (!stats) return <p className="text-center p-4">Loading analytics...</p>;
-
-  if (
-    stats.totalSalesValue === 0 &&
-    stats.totalCommissionValue === 0 &&
-    stats.activeUsersCount === 0
-  ) {
-    return (
-      <div className="p-6">
-        <h2 className="text-2xl font-semibold text-gray-700 mb-4">
-          Analytics & Overview
-        </h2>
-        <p className="text-center p-6 text-gray-500 bg-gray-100 rounded-lg shadow">
-          No analytics data available yet.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-6">
+    <div className="bg-white p-6 rounded-lg shadow-lg">
       <h2 className="text-2xl font-semibold text-gray-700 mb-4">
         Analytics & Overview
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard
-          title="Total Sales"
-          value={`₹${stats.totalSalesValue.toLocaleString('en-IN')}`}
-          colorClass="bg-blue-200"
-        />
-        <StatCard
-          title="Total Commission Paid"
-          value={`₹${stats.totalCommissionValue.toLocaleString('en-IN')}`}
-          colorClass="bg-green-200"
-        />
-        <StatCard
-          title="Active Users"
-          value={stats.activeUsersCount}
-          colorClass="bg-yellow-200"
-        />
-      </div>
+      {isLoading ? (
+         <div className="flex justify-center items-center h-48">
+            <ThreeDots color="#166534" height={80} width={80} />
+         </div>
+      ) : !stats || (stats.totalSalesValue === 0 && stats.activeUsersCount === 0) ? (
+        <p className="text-center p-6 text-gray-500 bg-gray-100 rounded-lg shadow">
+          No analytics data available yet. Make a sale to see the stats.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatCard
+            title="Total Sales Value"
+            value={`₹${stats.totalSalesValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            colorClass="bg-blue-200"
+          />
+          <StatCard
+            title="Total Profit Generated"
+            value={`₹${stats.totalProfitValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            colorClass="bg-green-200"
+          />
+          <StatCard
+            title="Active Users"
+            value={stats.activeUsersCount}
+            colorClass="bg-yellow-200"
+          />
+        </div>
+      )}
     </div>
   );
 }
+

@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,72 +11,78 @@ datasource db {
 
 enum Role {
   Admin
+  Franchise
   Distributor
+  SubDistributor
   Dealer
   Farmer
 }
 
 model User {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  name      String
-  password  String
-  role      Role
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Self-relation (upline & downline hierarchy)
-  uplineId String?
-  upline   User?   @relation("Hierarchy", fields: [uplineId], references: [id])
-  downline User[]  @relation("Hierarchy")
-
-  // Relation to sales (user as seller)
-  salesMade Sale[]
-
-  // NEW: Relation to sales (user as upline)
-  uplineSales Sale[] @relation("UplineSales")
-  payouts   Payout[]
+  id                 String          @id @default(cuid())
+  userId             String          @unique
+  name               String
+  password           String
+  role               Role
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  uplineId           String?
+  upline             User?           @relation("Hierarchy", fields: [uplineId], references: [id])
+  downline           User[]          @relation("Hierarchy")
+  payouts            Payout[]
+  inventory          UserInventory[] // ADDED: Relation to this user's personal inventory
+  transactionsAsSeller Transaction[]   @relation("SellerTransactions")
+  transactionsAsBuyer  Transaction[]   @relation("BuyerTransactions")
 }
 
 model Product {
-  id        String   @id @default(cuid())
-  name      String
-  price     Float
-  stock     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relation to sales
-  sales Sale[]
+  id                  String          @id @default(cuid())
+  name                String          @unique
+  // REMOVED: stock is no longer a global value here.
+  franchisePrice      Float
+  distributorPrice    Float
+  subDistributorPrice Float
+  dealerPrice         Float
+  farmerPrice         Float
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  inventoryItems      UserInventory[] // ADDED: Relation to all inventory items for this product
+  transactions        Transaction[]
 }
 
-model Sale {
-  id               String   @id @default(cuid())
-  quantity         Int
-  totalAmount      Float
-  sellerCommission Float
-  uplineCommission Float
-  createdAt        DateTime @default(now())
+// ADDED: The new model to track inventory per user.
+model UserInventory {
+  id        String  @id @default(cuid())
+  quantity  Int
 
-  // Relation to Product
+  user      User    @relation(fields: [userId], references: [id])
+  userId    String
   product   Product @relation(fields: [productId], references: [id])
   productId String
 
-  // Relation to Seller (User)
-  seller   User   @relation(fields: [sellerId], references: [id])
-  sellerId String
+  @@unique([userId, productId]) // Ensures a user has only one inventory entry per product
+}
 
-  // NEW: Relation to Upline (User)
-  upline   User?   @relation("UplineSales", fields: [uplineId], references: [id])
-  uplineId String?
+
+model Transaction {
+  id            String   @id @default(cuid())
+  quantity      Int
+  purchasePrice Float
+  totalAmount   Float
+  profit        Float
+  createdAt     DateTime @default(now())
+  product       Product  @relation(fields: [productId], references: [id])
+  productId     String
+  seller        User     @relation("SellerTransactions", fields: [sellerId], references: [id])
+  sellerId      String
+  buyer         User     @relation("BuyerTransactions", fields: [buyerId], references: [id])
+  buyerId       String
 }
 
 model Payout {
   id        String   @id @default(cuid())
   amount    Float
   createdAt DateTime @default(now())
-
-  // Relation to the user who received the payout
   user      User     @relation(fields: [userId], references: [id])
   userId    String
 }

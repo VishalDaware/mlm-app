@@ -1,53 +1,63 @@
-// src/app/dashboard/dealer/page.jsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
-// 1. Import getPendingPayoutForUser
-import { getProducts, createSale, getSalesForUser, getHierarchy, addUser, getPendingPayoutForUser } from '@/services/apiService';
-import DashboardHeader from '@/components/DashboardHeader';
+import { useAuthStore } from '../../../store/authStore';
+import { 
+  getDownline, 
+  addUser, 
+  createSale, 
+  getPendingPayoutForUser,
+  getUserInventory,
+  getHierarchy // 1. IMPORT getHierarchy
+} from '../../../services/apiService';
+import DashboardHeader from '../../../components/DashboardHeader';
+import HierarchyNode from '../../../components/admin/HierarchyNode'; // 2. IMPORT HierarchyNode
 import toast from 'react-hot-toast';
-import { ThreeDots } from 'react-loader-spinner';
-import HierarchyNode from '@/components/admin/HierarchyNode';
+
+// Simple inline SVG loader
+const Loader = () => (
+    <div className="flex justify-center items-center h-screen">
+        <svg width="80" height="80" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="#166534">
+            <g fill="none" fillRule="evenodd"><g transform="translate(1 1)" strokeWidth="2"><circle strokeOpacity=".5" cx="18" cy="18" r="18"/><path d="M36 18c0-9.94-8.06-18-18-18"><animateTransform attributeName="transform" type="rotate" from="0 18 18" to="360 18 18" dur="1s" repeatCount="indefinite"/></path></g></g>
+        </svg>
+    </div>
+);
 
 export default function DealerDashboard() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  
-  const [products, setProducts] = useState([]);
-  const [sales, setSales] = useState([]);
-  const [totalEarnings, setTotalEarnings] = useState(0);
-  const [pendingBalance, setPendingBalance] = useState(0); // 2. Add state for pending balance
-  const [isLoading, setIsLoading] = useState(true);
-  const [hierarchy, setHierarchy] = useState(null);
 
-  const [saleProduct, setSaleProduct] = useState('');
-  const [saleQuantity, setSaleQuantity] = useState(1);
+  const [inventory, setInventory] = useState([]);
+  const [downline, setDownline] = useState([]);
+  const [hierarchy, setHierarchy] = useState(null); // 3. ADD state for hierarchy
+  const [analytics, setAnalytics] = useState({ pending: 0, teamSize: 0 });
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Form states
+  const [sellProductId, setSellProductId] = useState('');
+  const [sellQuantity, setSellQuantity] = useState(1);
+  const [sellTo, setSellTo] = useState('');
   const [newFarmerName, setNewFarmerName] = useState('');
+  
+  const selectedProductInStock = inventory.find(item => item.productId === sellProductId)?.quantity || 0;
 
   const fetchData = useCallback(async () => {
     if (user) {
       try {
-        // 3. Fetch pending payout data along with other data
-        const [productData, salesData, hierarchyData, payoutData] = await Promise.all([
-          getProducts(),
-          getSalesForUser(user.userId),
-          getHierarchy(user.userId),
+        setIsLoading(true);
+        // 4. FETCH hierarchy data
+        const [inventoryData, downlineData, payoutData, hierarchyData] = await Promise.all([
+          getUserInventory(),
+          getDownline(user.userId),
           getPendingPayoutForUser(user.userId),
+          getHierarchy(user.userId)
         ]);
-        setProducts(productData);
-        setHierarchy(hierarchyData);
-        setPendingBalance(payoutData.pendingBalance); // 4. Set pending balance from API
-        
-        const directSales = salesData.filter(s => s.sellerId === user.id);
-        setSales(directSales);
-
-        const earnings = directSales.reduce((acc, sale) => acc + sale.sellerCommission, 0);
-        setTotalEarnings(earnings);
-
+        setInventory(inventoryData);
+        setDownline(downlineData);
+        setAnalytics({ pending: payoutData.pendingBalance, teamSize: downlineData.length });
+        setHierarchy(hierarchyData); // 5. SET hierarchy state
       } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
         toast.error("Could not load dashboard data.");
       } finally {
         setIsLoading(false);
@@ -58,71 +68,110 @@ export default function DealerDashboard() {
   useEffect(() => {
     if(user) fetchData();
   }, [user, fetchData]);
-  
+
   const handleLogout = () => { logout(); router.push('/'); };
   useEffect(() => { if (user && user.role !== 'Dealer') router.push('/'); }, [user, router]);
-  const handleMakeSale = async (e) => { e.preventDefault(); if (!saleProduct || saleQuantity < 1) return; try { await createSale({ sellerId: user.id, productId: saleProduct, quantity: parseInt(saleQuantity) }); toast.success('Sale completed successfully!'); setSaleProduct(''); setSaleQuantity(1); fetchData(); } catch (error) { console.error("Failed to make sale:", error); } };
-  const handleAddFarmer = async (e) => { e.preventDefault(); if (!newFarmerName.trim()) { toast.error("Please enter the farmer's name."); return; } try { await addUser({ name: newFarmerName, role: 'Farmer', uplineId: user.id }); setNewFarmerName(''); toast.success(`Farmer "${newFarmerName}" added successfully!`); fetchData(); } catch (error) { console.error("Failed to add farmer:", error); } };
-
+  
+  const handleSell = async (e) => {
+    e.preventDefault();
+    if (!sellProductId || !sellTo || sellQuantity < 1) return toast.error("Please fill all fields.");
+    if (parseInt(sellQuantity) > selectedProductInStock) return toast.error(`Not enough stock.`);
+    try {
+      await createSale({ buyerId: sellTo, productId: sellProductId, quantity: parseInt(sellQuantity) });
+      toast.success('Sale recorded successfully!');
+      setSellProductId('');
+      setSellQuantity(1);
+      setSellTo('');
+      fetchData();
+    } catch (error) {
+        const errorMessage = error.response?.data?.error || "Failed to complete sale.";
+        toast.error(errorMessage);
+    }
+  };
+  
+  const handleAddFarmer = async (e) => {
+    e.preventDefault();
+    if (!newFarmerName.trim()) return;
+    try {
+      await addUser({ name: newFarmerName, role: 'Farmer', uplineId: user.id });
+      setNewFarmerName('');
+      toast.success(`Farmer added!`);
+      fetchData();
+    } catch (error) { toast.error('Failed to add farmer.'); }
+  };
 
   if (!user || isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-stone-50">
-        <ThreeDots color="#166534" height={100} width={100} />
-      </div>
-    );
+    return <Loader />;
   }
-
-  const getProductName = (productId) => {
-    const product = products.find(p => p.id === productId);
-    return product ? product.name : 'Unknown';
-  };
 
   return (
     <div className="min-h-screen bg-stone-50">
       <DashboardHeader title="Dealer Dashboard" userName={user.name} onLogout={handleLogout} />
-      
-      <main className="container mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 flex flex-col gap-8">
-          {/* 5. Updated Analytics section with 2 cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-              <h3 className="text-stone-500 text-sm font-semibold tracking-wider uppercase">Total Earnings</h3>
-              <p className="text-4xl font-bold text-green-600 mt-2">₹{totalEarnings.toFixed(2)}</p>
+      <main className="container mx-auto p-6 space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 flex flex-col gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Pending Payout</h3><p className="text-4xl font-bold text-red-600 mt-2">₹{analytics.pending.toFixed(2)}</p></div>
+              <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Team Size (Farmers)</h3><p className="text-4xl font-bold text-teal-600 mt-2">{analytics.teamSize}</p></div>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-              <h3 className="text-stone-500 text-sm font-semibold tracking-wider uppercase">Pending Payout</h3>
-              <p className="text-4xl font-bold text-red-600 mt-2">₹{pendingBalance.toFixed(2)}</p>
+            <div className="bg-white p-6 rounded-lg shadow-lg">
+              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Your Inventory</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead><tr className="bg-stone-100 text-stone-600 uppercase text-sm"><th className="p-3">Product Name</th><th className="p-3">Your Stock</th></tr></thead>
+                  <tbody>
+                    {inventory.length > 0 ? inventory.map(item => (
+                      <tr key={item.id} className="border-b"><td className="p-3">{item.product.name}</td><td className="p-3 font-medium">{item.quantity} Units</td></tr>
+                    )) : <tr><td colSpan="2" className="p-3 text-center">Your inventory is empty.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-          
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-semibold text-gray-700 mb-4">My Sales History</h2>
-            <div className="overflow-x-auto max-h-96"><table className="w-full text-left"><thead><tr className="bg-stone-100 text-stone-600 uppercase text-sm"><th className="p-3 font-semibold">Product</th><th className="p-3 font-semibold">Qty</th><th className="p-3 font-semibold">Total</th><th className="p-3 font-semibold">My Commission</th></tr></thead><tbody>{sales.length > 0 ? sales.map(sale => (<tr key={sale.id} className="border-b border-stone-200 hover:bg-stone-50"><td className="p-3 text-gray-800">{getProductName(sale.productId)}</td><td className="p-3 text-gray-800">{sale.quantity}</td><td className="p-3 text-gray-800">₹{sale.totalAmount.toFixed(2)}</td><td className="p-3 text-green-700 font-semibold">₹{sale.sellerCommission.toFixed(2)}</td></tr>)) : (<tr><td colSpan="4" className="p-3 text-center text-gray-500">You haven't made any sales yet.</td></tr>)}</tbody></table></div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-semibold text-gray-700 mb-4">My Team Hierarchy (Farmers)</h2>
-            {hierarchy ? (<div className="pl-2"><HierarchyNode user={hierarchy} /></div>) : (<p className="text-gray-500">Hierarchy data could not be loaded.</p>)}
+          <div className="flex flex-col gap-8">
+            <div className="bg-white p-6 rounded-lg shadow-lg">
+              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Sell to Farmer</h2>
+              <form onSubmit={handleSell} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium">Product</label>
+                  <select value={sellProductId} onChange={(e) => setSellProductId(e.target.value)} className="w-full mt-1 p-2 border rounded-md">
+                    <option value="">Select Product</option>
+                    {inventory.map(item => <option key={item.id} value={item.productId}>{item.product.name} (In Stock: {item.quantity})</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium">Quantity</label>
+                  <input type="number" value={sellQuantity} onChange={(e) => setSellQuantity(e.target.value)} className="w-full mt-1 p-2 border rounded-md" min="1" max={selectedProductInStock} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium">Sell To</label>
+                  <select value={sellTo} onChange={(e) => setSellTo(e.target.value)} className="w-full mt-1 p-2 border rounded-md">
+                    <option value="">Select Farmer</option>
+                    {downline.map(d => <option key={d.id} value={d.id}>{d.name} ({d.userId})</option>)}
+                  </select>
+                </div>
+                <button type="submit" className="w-full mt-2 py-3 bg-green-600 text-white font-bold rounded-md">Complete Sale</button>
+              </form>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-lg">
+              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Recruit Farmer</h2>
+              <form onSubmit={handleAddFarmer}>
+                <label className="block text-sm font-medium">Farmer Name</label>
+                <input type="text" value={newFarmerName} onChange={(e) => setNewFarmerName(e.target.value)} className="w-full mt-1 p-2 border rounded-md" />
+                <button type="submit" className="w-full mt-4 py-2 bg-teal-600 text-white font-bold rounded-md">Add Farmer</button>
+              </form>
+            </div>
           </div>
         </div>
-        
-        <div className="flex flex-col gap-8">
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-semibold text-gray-700 mb-4">Make a Sale</h2>
-            <form onSubmit={handleMakeSale} className="flex flex-col gap-4">
-              <div><label className="block text-sm font-medium text-gray-600 mb-1">Product</label><select value={saleProduct} onChange={(e) => setSaleProduct(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"><option value="">Select a Product</option>{products.map(p => <option key={p.id} value={p.id}>{p.name} (Stock: {p.stock})</option>)}</select></div>
-              <div><label className="block text-sm font-medium text-gray-600 mb-1">Quantity</label><input type="number" value={saleQuantity} onChange={(e) => setSaleQuantity(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" min="1"/></div>
-              <button type="submit" className="w-full mt-2 px-6 py-3 bg-green-600 text-white font-bold rounded-md hover:bg-green-700 transition-colors">Complete Sale</button>
-            </form>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-semibold text-gray-700 mb-4">Add New Farmer</h2>
-            <form onSubmit={handleAddFarmer}>
-              <label className="block text-sm font-medium text-gray-600">Farmer's Name</label>
-              <input type="text" value={newFarmerName} onChange={(e) => setNewFarmerName(e.target.value)} className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Enter farmer's name"/>
-              <button type="submit" className="w-full mt-4 px-6 py-2 bg-teal-600 text-white font-bold rounded-md hover:bg-teal-700 transition-colors">Add Farmer</button>
-            </form>
-          </div>
+
+        {/* 6. RENDER the hierarchy view */}
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <h2 className="text-2xl font-semibold text-gray-700 mb-4">My Team Hierarchy</h2>
+          {hierarchy ? (
+            <div className="pl-2 border-l-2 border-stone-200"><HierarchyNode user={hierarchy} /></div>
+          ) : (
+            <p className="text-gray-500 text-center">No downline hierarchy to display.</p>
+          )}
         </div>
       </main>
     </div>

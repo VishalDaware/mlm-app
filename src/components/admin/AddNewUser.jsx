@@ -1,93 +1,135 @@
-// src/components/admin/AddNewUser.jsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { addUser, getUsersByRole, getDownline } from '@/services/apiService'; 
 import toast from 'react-hot-toast';
 import { ThreeDots } from 'react-loader-spinner';
 
 export default function AddNewUser() {
   const [name, setName] = useState('');
-  const [role, setRole] = useState('Distributor');
+  const [role, setRole] = useState('Franchise');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // State for dynamic dropdowns
+  // State for the data in our dynamic dropdowns
+  const [franchises, setFranchises] = useState([]);
   const [distributors, setDistributors] = useState([]);
+  const [subDistributors, setSubDistributors] = useState([]);
   const [dealers, setDealers] = useState([]);
+  
+  // State for the selected values from the dropdowns
+  const [selectedFranchise, setSelectedFranchise] = useState('');
   const [selectedDistributor, setSelectedDistributor] = useState('');
+  const [selectedSubDistributor, setSelectedSubDistributor] = useState('');
   const [selectedDealer, setSelectedDealer] = useState('');
 
-  // Fetch all distributors when the component loads
-  useEffect(() => {
-    const fetchDistributors = async () => {
-      try {
-        const data = await getUsersByRole('Distributor');
-        setDistributors(data);
-      } catch (error) {
-        console.error("Failed to fetch distributors", error);
-      }
-    };
-    fetchDistributors();
+  // --- Data Fetching Logic ---
+
+  // Create a reusable function to fetch franchises, wrapped in useCallback for stability
+  const fetchFranchises = useCallback(async () => {
+    try {
+      const data = await getUsersByRole('Franchise');
+      setFranchises(data);
+    } catch (error) { 
+      console.error("Failed to fetch franchises", error); 
+      toast.error("Could not load franchises.");
+    }
   }, []);
 
-  // When a distributor is selected, fetch their downline (dealers)
+  // Fetch all franchises when the component first loads
   useEffect(() => {
-    if (role === 'Farmer' && selectedDistributor) {
-      const fetchDealers = async () => {
-        try {
-          const distributor = distributors.find(d => d.id === selectedDistributor);
-          const data = await getDownline(distributor.userId);
-          setDealers(data);
-        } catch (error) {
-          console.error("Failed to fetch dealers", error);
-          setDealers([]); // Clear dealers on error
-        }
-      };
-      fetchDealers();
-    } else {
-      setDealers([]); // Clear dealers if role or distributor changes
-    }
-  }, [role, selectedDistributor, distributors]);
+    fetchFranchises();
+  }, [fetchFranchises]);
 
-  // Reset form fields when role changes
-  const handleRoleChange = (e) => {
-    setRole(e.target.value);
-    setName('');
-    setSelectedDistributor('');
+  // When a franchise is selected, fetch its downline (distributors)
+  useEffect(() => {
+    if (selectedFranchise) {
+      const franchise = franchises.find(f => f.id === selectedFranchise);
+      if (franchise) {
+        getDownline(franchise.userId).then(setDistributors).catch(console.error);
+      }
+    } else {
+      setDistributors([]); // Clear dependent dropdowns if selection is cleared
+    }
+    setSelectedDistributor(''); // Reset subsequent selections
+  }, [selectedFranchise, franchises]);
+
+  // When a distributor is selected, fetch its downline (sub-distributors)
+  useEffect(() => {
+    if (selectedDistributor) {
+      const distributor = distributors.find(d => d.id === selectedDistributor);
+      if (distributor) {
+        getDownline(distributor.userId).then(setSubDistributors).catch(console.error);
+      }
+    } else {
+      setSubDistributors([]);
+    }
+    setSelectedSubDistributor('');
+  }, [selectedDistributor, distributors]);
+  
+  // When a sub-distributor is selected, fetch its downline (dealers)
+  useEffect(() => {
+    if (selectedSubDistributor) {
+        const subDist = subDistributors.find(sd => sd.id === selectedSubDistributor);
+        if(subDist) {
+            getDownline(subDist.userId).then(setDealers).catch(console.error);
+        }
+    } else {
+        setDealers([]);
+    }
     setSelectedDealer('');
+  }, [selectedSubDistributor, subDistributors]);
+
+
+  // --- Form Handling ---
+
+  const resetForm = () => {
+    setName('');
+    setRole('Franchise');
+    setSelectedFranchise('');
+    setSelectedDistributor('');
+    setSelectedSubDistributor('');
+    setSelectedDealer('');
+  };
+
+  const handleRoleChange = (e) => {
+    const newRole = e.target.value;
+    setRole(newRole);
+    // Reset all selections and the name field, but NOT the role itself
+    setSelectedFranchise('');
+    setSelectedDistributor('');
+    setSelectedSubDistributor('');
+    setSelectedDealer('');
+    setName('');
   };
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    if (!name.trim()) {
-      toast.error('Please enter a name.');
-      return;
+    if (!name.trim()) return toast.error('Please enter a name for the new user.');
+
+    let uplineId;
+    switch(role) {
+        case 'Franchise': uplineId = 'admin'; break;
+        case 'Distributor': uplineId = selectedFranchise; break;
+        case 'SubDistributor': uplineId = selectedDistributor; break;
+        case 'Dealer': uplineId = selectedSubDistributor; break;
+        case 'Farmer': uplineId = selectedDealer; break;
+        default: return toast.error('Invalid role selected.');
     }
 
-    let uplineId = 'admin'; // Default for Distributor
-    if (role === 'Dealer') {
-      if (!selectedDistributor) {
-        toast.error('Please select a distributor.');
-        return;
-      }
-      uplineId = selectedDistributor;
-    } else if (role === 'Farmer') {
-      if (!selectedDealer) {
-        toast.error('Please select a dealer.');
-        return;
-      }
-      uplineId = selectedDealer;
-    }
-    
+    if (!uplineId) return toast.error(`Please select an upline for the new ${role}.`);
+
     setIsSubmitting(true);
     try {
       const createdUser = await addUser({ name, role, uplineId });
-      toast.success(`User "${createdUser.name}" created! ID: ${createdUser.userId}`);
-      // Reset form
-      setName('');
-      setRole('Distributor');
-      setSelectedDistributor('');
-      setSelectedDealer('');
+      toast.success(`User "${createdUser.name}" created successfully! ID: ${createdUser.userId}`);
+      
+      // THE FIX: If a franchise was just created, re-fetch the list
+      if (role === 'Franchise') {
+        fetchFranchises();
+      }
+      
+      resetForm(); // After successful creation, do a full reset
+
     } catch (error) {
       console.error("Failed to create user:", error);
     } finally {
@@ -101,47 +143,58 @@ export default function AddNewUser() {
       <form onSubmit={handleCreateUser} className="max-w-lg space-y-6">
         <div>
           <label className="block text-gray-700 font-semibold mb-2">Assign Role</label>
-          <select value={role} onChange={handleRoleChange} className="w-full p-3 border border-gray-300 rounded-md bg-white">
+          <select value={role} onChange={handleRoleChange} className="w-full p-3 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="Franchise">Franchise</option>
             <option value="Distributor">Distributor</option>
+            <option value="SubDistributor">Sub-Distributor</option>
             <option value="Dealer">Dealer</option>
             <option value="Farmer">Farmer</option>
           </select>
         </div>
 
-        {/* Conditional Fields for Dealer */}
-        {role === 'Dealer' && (
+        {['Distributor', 'SubDistributor', 'Dealer', 'Farmer'].includes(role) && (
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Under Franchise</label>
+            <select value={selectedFranchise} onChange={(e) => setSelectedFranchise(e.target.value)} className="w-full p-3 border border-gray-300 rounded-md bg-white">
+              <option value="">-- Select a Franchise --</option>
+              {franchises.map(f => <option key={f.id} value={f.id}>{f.name} ({f.userId})</option>)}
+            </select>
+          </div>
+        )}
+
+        {['SubDistributor', 'Dealer', 'Farmer'].includes(role) && (
           <div>
             <label className="block text-gray-700 font-semibold mb-2">Under Distributor</label>
-            <select value={selectedDistributor} onChange={(e) => setSelectedDistributor(e.target.value)} className="w-full p-3 border border-gray-300 rounded-md bg-white">
+            <select value={selectedDistributor} onChange={(e) => setSelectedDistributor(e.target.value)} className="w-full p-3 border border-gray-300 rounded-md bg-white" disabled={!selectedFranchise}>
               <option value="">-- Select a Distributor --</option>
               {distributors.map(d => <option key={d.id} value={d.id}>{d.name} ({d.userId})</option>)}
             </select>
           </div>
         )}
 
-        {/* Conditional Fields for Farmer */}
+        {['Dealer', 'Farmer'].includes(role) && (
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Under Sub-Distributor</label>
+            <select value={selectedSubDistributor} onChange={(e) => setSelectedSubDistributor(e.target.value)} className="w-full p-3 border border-gray-300 rounded-md bg-white" disabled={!selectedDistributor}>
+              <option value="">-- Select a Sub-Distributor --</option>
+              {subDistributors.map(sd => <option key={sd.id} value={sd.id}>{sd.name} ({sd.userId})</option>)}
+            </select>
+          </div>
+        )}
+        
         {role === 'Farmer' && (
-          <>
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Under Distributor</label>
-              <select value={selectedDistributor} onChange={(e) => setSelectedDistributor(e.target.value)} className="w-full p-3 border border-gray-300 rounded-md bg-white">
-                <option value="">-- Select a Distributor --</option>
-                {distributors.map(d => <option key={d.id} value={d.id}>{d.name} ({d.userId})</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Under Dealer</label>
-              <select value={selectedDealer} onChange={(e) => setSelectedDealer(e.target.value)} className="w-full p-3 border border-gray-300 rounded-md bg-white" disabled={!selectedDistributor || dealers.length === 0}>
-                <option value="">-- Select a Dealer --</option>
-                {dealers.map(d => <option key={d.id} value={d.id}>{d.name} ({d.userId})</option>)}
-              </select>
-            </div>
-          </>
+           <div>
+            <label className="block text-gray-700 font-semibold mb-2">Under Dealer</label>
+            <select value={selectedDealer} onChange={(e) => setSelectedDealer(e.target.value)} className="w-full p-3 border border-gray-300 rounded-md bg-white" disabled={!selectedSubDistributor}>
+              <option value="">-- Select a Dealer --</option>
+              {dealers.map(d => <option key={d.id} value={d.id}>{d.name} ({d.userId})</option>)}
+            </select>
+          </div>
         )}
 
         <div>
-          <label className="block text-gray-700 font-semibold mb-2">New User's Full Name</label>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter full name" className="w-full p-3 border border-gray-300 rounded-md" required />
+          <label className="block text-gray-700 font-semibold mb-2">New User&apos;s Full Name</label>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter full name" className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" required />
         </div>
         
         <button type="submit" disabled={isSubmitting} className="w-40 h-12 flex justify-center items-center px-8 py-3 bg-green-600 text-white font-bold rounded-md hover:bg-green-700 disabled:bg-green-400">
@@ -151,3 +204,4 @@ export default function AddNewUser() {
     </div>
   );
 }
+

@@ -3,35 +3,34 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../../store/authStore';
-import { 
-  getDownline, 
-  addUser, 
-  createSale, 
+import {
+  getDownline,
+  addUser,
+  createSale,
   getPendingPayoutForUser,
   getUserInventory,
   getHierarchy // 1. IMPORT getHierarchy
 } from '../../../services/apiService';
 import DashboardHeader from '../../../components/DashboardHeader';
-import HierarchyNode from '../../../components/admin/HierarchyNode'; // 2. IMPORT HierarchyNode
+import HierarchyNode from '../../../components/admin/HierarchyNode'; // 2. IMPORT HierarchyNode directly
 import toast from 'react-hot-toast';
 
-// Simple inline SVG loader
+// Simple inline SVG loader to remove dependency
 const Loader = () => (
-    <div className="flex justify-center items-center h-screen">
-        <svg width="80" height="80" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="#166534">
-            <g fill="none" fillRule="evenodd"><g transform="translate(1 1)" strokeWidth="2"><circle strokeOpacity=".5" cx="18" cy="18" r="18"/><path d="M36 18c0-9.94-8.06-18-18-18"><animateTransform attributeName="transform" type="rotate" from="0 18 18" to="360 18 18" dur="1s" repeatCount="indefinite"/></path></g></g>
-        </svg>
-    </div>
+  <div className="flex justify-center items-center h-screen">
+    <svg width="80" height="80" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="#166534">
+      <g fill="none" fillRule="evenodd"><g transform="translate(1 1)" strokeWidth="2"><circle strokeOpacity=".5" cx="18" cy="18" r="18"/><path d="M36 18c0-9.94-8.06-18-18-18"><animateTransform attributeName="transform" type="rotate" from="0 18 18" to="360 18 18" dur="1s" repeatCount="indefinite"/></path></g></g>
+    </svg>
+  </div>
 );
 
-
-export default function DistributorDashboard() {
+export default function FranchiseDashboard() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
 
   const [inventory, setInventory] = useState([]);
   const [downline, setDownline] = useState([]);
-  const [hierarchy, setHierarchy] = useState(null); // 3. ADD state for hierarchy
+  const [hierarchy, setHierarchy] = useState(null); // 3. ADD state for hierarchy data
   const [analytics, setAnalytics] = useState({ pending: 0, teamSize: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -39,27 +38,28 @@ export default function DistributorDashboard() {
   const [sellProductId, setSellProductId] = useState('');
   const [sellQuantity, setSellQuantity] = useState(1);
   const [sellTo, setSellTo] = useState('');
-  const [newSubDistributorName, setNewSubDistributorName] = useState('');
-  
+  const [newDistributorName, setNewDistributorName] = useState('');
+
   const selectedProductInStock = inventory.find(item => item.productId === sellProductId)?.quantity || 0;
 
   const fetchData = useCallback(async () => {
     if (user) {
       try {
         setIsLoading(true);
-        // 4. FETCH hierarchy data
+        // 4. FETCH hierarchy data along with everything else
         const [inventoryData, downlineData, payoutData, hierarchyData] = await Promise.all([
           getUserInventory(),
           getDownline(user.userId),
           getPendingPayoutForUser(user.userId),
-          getHierarchy(user.userId)
+          getHierarchy(user.userId) // Fetch for the current user's ID
         ]);
         setInventory(inventoryData);
         setDownline(downlineData);
         setAnalytics({ pending: payoutData.pendingBalance, teamSize: downlineData.length });
-        setHierarchy(hierarchyData); // 5. SET hierarchy state
+        setHierarchy(hierarchyData); // 5. SET the hierarchy state
       } catch (error) {
-        toast.error("Could not load dashboard data.");
+        toast.error("Could not load all dashboard data.");
+        console.error("Dashboard fetch error:", error);
       } finally {
         setIsLoading(false);
       }
@@ -67,12 +67,12 @@ export default function DistributorDashboard() {
   }, [user]);
 
   useEffect(() => {
-    if(user) fetchData();
+    if (user) fetchData();
   }, [user, fetchData]);
 
   const handleLogout = () => { logout(); router.push('/'); };
-  useEffect(() => { if (user && user.role !== 'Distributor') router.push('/'); }, [user, router]);
-  
+  useEffect(() => { if (user && user.role !== 'Franchise') router.push('/'); }, [user, router]);
+
   const handleSell = async (e) => {
     e.preventDefault();
     if (!sellProductId || !sellTo || sellQuantity < 1) return toast.error("Please fill all fields.");
@@ -85,20 +85,20 @@ export default function DistributorDashboard() {
       setSellTo('');
       fetchData();
     } catch (error) {
-        const errorMessage = error.response?.data?.error || "Failed to complete sale.";
-        toast.error(errorMessage);
+      const errorMessage = error.response?.data?.error || "Failed to complete sale.";
+      toast.error(errorMessage);
     }
   };
-  
-  const handleAddSubDistributor = async (e) => {
+
+  const handleAddDistributor = async (e) => {
     e.preventDefault();
-    if (!newSubDistributorName.trim()) return;
+    if (!newDistributorName.trim()) return;
     try {
-      await addUser({ name: newSubDistributorName, role: 'SubDistributor', uplineId: user.id });
-      setNewSubDistributorName('');
-      toast.success(`Sub-Distributor added!`);
+      await addUser({ name: newDistributorName, role: 'Distributor', uplineId: user.id });
+      setNewDistributorName('');
+      toast.success('Distributor added!');
       fetchData();
-    } catch (error) { toast.error('Failed to add sub-distributor.'); }
+    } catch (error) { toast.error('Failed to add distributor.'); }
   };
 
   if (!user || isLoading) {
@@ -107,13 +107,13 @@ export default function DistributorDashboard() {
 
   return (
     <div className="min-h-screen bg-stone-50">
-      <DashboardHeader title="Distributor Dashboard" userName={user.name} onLogout={handleLogout} />
+      <DashboardHeader title="Franchise Dashboard" userName={user.name} onLogout={handleLogout} />
       <main className="container mx-auto p-6 space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 flex flex-col gap-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Pending Payout</h3><p className="text-4xl font-bold text-red-600 mt-2">₹{analytics.pending.toFixed(2)}</p></div>
-              <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Team Size</h3><p className="text-4xl font-bold text-teal-600 mt-2">{analytics.teamSize}</p></div>
+              <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Team Size (Distributors)</h3><p className="text-4xl font-bold text-teal-600 mt-2">{analytics.teamSize}</p></div>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-lg">
               <h2 className="text-2xl font-semibold text-gray-700 mb-4">Your Inventory</h2>
@@ -131,12 +131,12 @@ export default function DistributorDashboard() {
           </div>
           <div className="flex flex-col gap-8">
             <div className="bg-white p-6 rounded-lg shadow-lg">
-              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Sell to Sub-Distributor</h2>
+              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Sell to Distributor</h2>
               <form onSubmit={handleSell} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium">Product</label>
                   <select value={sellProductId} onChange={(e) => setSellProductId(e.target.value)} className="w-full mt-1 p-2 border rounded-md">
-                    <option value="">Select Product</option>
+                    <option value="">Select a product</option>
                     {inventory.map(item => <option key={item.id} value={item.productId}>{item.product.name} (In Stock: {item.quantity})</option>)}
                   </select>
                 </div>
@@ -147,7 +147,7 @@ export default function DistributorDashboard() {
                 <div>
                   <label className="block text-sm font-medium">Sell To</label>
                   <select value={sellTo} onChange={(e) => setSellTo(e.target.value)} className="w-full mt-1 p-2 border rounded-md">
-                    <option value="">Select Sub-Distributor</option>
+                    <option value="">Select a distributor</option>
                     {downline.map(d => <option key={d.id} value={d.id}>{d.name} ({d.userId})</option>)}
                   </select>
                 </div>
@@ -155,17 +155,17 @@ export default function DistributorDashboard() {
               </form>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-lg">
-              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Recruit Sub-Distributor</h2>
-              <form onSubmit={handleAddSubDistributor}>
-                <label className="block text-sm font-medium">Sub-Distributor Name</label>
-                <input type="text" value={newSubDistributorName} onChange={(e) => setNewSubDistributorName(e.target.value)} className="w-full mt-1 p-2 border rounded-md" />
-                <button type="submit" className="w-full mt-4 py-2 bg-teal-600 text-white font-bold rounded-md">Add Sub-Distributor</button>
+              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Recruit Distributor</h2>
+              <form onSubmit={handleAddDistributor}>
+                <label className="block text-sm font-medium">Distributor Name</label>
+                <input type="text" value={newDistributorName} onChange={(e) => setNewDistributorName(e.target.value)} className="w-full mt-1 p-2 border rounded-md" />
+                <button type="submit" className="w-full mt-4 py-2 bg-teal-600 text-white font-bold rounded-md">Add Distributor</button>
               </form>
             </div>
           </div>
         </div>
 
-        {/* 6. RENDER the hierarchy view */}
+        {/* 6. RENDER the hierarchy using your suggested logic */}
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <h2 className="text-2xl font-semibold text-gray-700 mb-4">My Team Hierarchy</h2>
           {hierarchy ? (

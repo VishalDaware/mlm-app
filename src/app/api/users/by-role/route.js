@@ -1,4 +1,3 @@
-// src/app/api/users/by-role/route.js
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
@@ -7,7 +6,8 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
 
-    if (!role || !['Distributor', 'Dealer'].includes(role)) {
+    // Validate the role parameter to ensure it's one of the expected values
+    if (!role || !['Franchise', 'Distributor', 'SubDistributor', 'Dealer'].includes(role)) {
       return NextResponse.json({ error: 'Invalid or missing role parameter' }, { status: 400 });
     }
 
@@ -15,7 +15,7 @@ export async function GET(request) {
       where: {
         role: role,
       },
-      select: { // Only send necessary data
+      select: { // Only send the necessary data to the frontend
         id: true,
         userId: true,
         name: true,
@@ -28,4 +28,4 @@ export async function GET(request) {
     console.error("Failed to fetch users by role:", error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-} 
+}

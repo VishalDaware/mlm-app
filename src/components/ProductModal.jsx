@@ -1,106 +1,127 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 
 export default function ProductModal({ product, onClose, onSave }) {
+  // 1. ADDED 'stock' to the formData state
   const [formData, setFormData] = useState({
     name: '',
-    price: '',
-    stock: '',
+    stock: '', // New field for initial stock
+    franchisePrice: '',
+    distributorPrice: '',
+    subDistributorPrice: '',
+    dealerPrice: '',
+    farmerPrice: '',
   });
-  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // When the modal opens, populate the form with the product's data or reset it
   useEffect(() => {
     if (product) {
       setFormData({
-        name: product.name,
-        price: product.price,
-        stock: product.stock,
+        name: product.name || '',
+        stock: product.stock || '', // Populate stock for editing
+        franchisePrice: product.franchisePrice || '',
+        distributorPrice: product.distributorPrice || '',
+        subDistributorPrice: product.subDistributorPrice || '',
+        dealerPrice: product.dealerPrice || '',
+        farmerPrice: product.farmerPrice || '',
       });
     } else {
-      setFormData({ name: '', price: '', stock: '' });
+      // Reset all fields for a new product
+      setFormData({ name: '', stock: '', franchisePrice: '', distributorPrice: '', subDistributorPrice: '', dealerPrice: '', farmerPrice: '' });
     }
-    setErrors({}); 
   }, [product]);
 
+  // Handle changes for any input field
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
   
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Product name is required';
-    if (!formData.price) newErrors.price = 'Price is required';
-    else if (parseFloat(formData.price) <= 0) newErrors.price = 'Price must be positive';
-    if (!formData.stock && formData.stock !== 0) newErrors.stock = 'Stock is required';
-    else if (parseInt(formData.stock, 10) < 0) newErrors.stock = 'Stock cannot be negative';
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      const productData = {
-        ...formData,
-        price: parseFloat(formData.price),
-        stock: parseInt(formData.stock, 10),
-      };
-      onSave(productData);
+    setIsSubmitting(true);
+    
+    // Convert all price and stock strings to numbers
+    const productData = {
+      name: formData.name,
+      stock: parseInt(formData.stock, 10), // Parse stock as an integer
+      franchisePrice: parseFloat(formData.franchisePrice),
+      distributorPrice: parseFloat(formData.distributorPrice),
+      subDistributorPrice: parseFloat(formData.subDistributorPrice),
+      dealerPrice: parseFloat(formData.dealerPrice),
+      farmerPrice: parseFloat(formData.farmerPrice),
+    };
+
+    // Basic validation
+    for (const key in productData) {
+      const value = productData[key];
+      // Check if value is not a number (for prices/stock) or is an empty string (for name)
+      if ((typeof value === 'number' && isNaN(value)) || (typeof value === 'string' && !value.trim())) {
+        toast.error(`Please fill in a valid value for ${key}.`);
+        setIsSubmitting(false);
+        return;
+      }
     }
+    
+    await onSave(productData);
+    setIsSubmitting(false);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/20  backdrop-blur-sm flex justify-center items-center z-50">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+      <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">{product ? 'Edit Product' : 'Add New Product'}</h2>
         
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">Product Name</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
-            />
-            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 2. Moved Product Name and Stock to a 2-column grid */}
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Product Name</label>
+              <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full p-3 border rounded-md" required />
+            </div>
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Initial Stock (Quantity)</label>
+              <input type="number" name="stock" value={formData.stock} onChange={handleChange} className="w-full p-3 border rounded-md" required />
+            </div>
           </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">Price</label>
-            <input
-              type="number"
-              name="price"
-              step="0.01"
-              value={formData.price}
-              onChange={handleChange}
-              className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 ${errors.price ? 'border-red-500' : 'border-gray-300'}`}
-            />
-            {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
+
+          {/* Price inputs remain in their own grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Franchise Price</label>
+              <input type="number" step="0.01" name="franchisePrice" value={formData.franchisePrice} onChange={handleChange} className="w-full p-3 border rounded-md" required />
+            </div>
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Distributor Price</label>
+              <input type="number" step="0.01" name="distributorPrice" value={formData.distributorPrice} onChange={handleChange} className="w-full p-3 border rounded-md" required />
+            </div>
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Sub-Distributor Price</label>
+              <input type="number" step="0.01" name="subDistributorPrice" value={formData.subDistributorPrice} onChange={handleChange} className="w-full p-3 border rounded-md" required />
+            </div>
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Dealer Price</label>
+              <input type="number" step="0.01" name="dealerPrice" value={formData.dealerPrice} onChange={handleChange} className="w-full p-3 border rounded-md" required />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-gray-700 font-semibold mb-2">Farmer Price (MRP)</label>
+              <input type="number" step="0.01" name="farmerPrice" value={formData.farmerPrice} onChange={handleChange} className="w-full p-3 border rounded-md" required />
+            </div>
           </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">Stock</label>
-            <input
-              type="number"
-              name="stock"
-              value={formData.stock}
-              onChange={handleChange}
-              className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 ${errors.stock ? 'border-red-500' : 'border-gray-300'}`}
-            />
-            {errors.stock && <p className="text-red-500 text-sm mt-1">{errors.stock}</p>}
-          </div>
-          <div className="flex justify-end gap-4 mt-8">
-            <button type="button" onClick={onClose} className="px-6 py-2 bg-stone-200 text-stone-800 rounded-md hover:bg-stone-300 font-semibold transition-colors">
+
+          <div className="flex justify-end gap-4 pt-4">
+            <button type="button" onClick={onClose} className="px-6 py-2 bg-stone-200 text-stone-800 rounded-md font-semibold">
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold transition-colors"
+              disabled={isSubmitting}
+              className="px-6 py-2 bg-green-600 text-white rounded-md font-semibold disabled:bg-green-300"
             >
-              Save Product
+              {isSubmitting ? 'Saving...' : 'Save Product'}
             </button>
           </div>
         </form>
@@ -108,3 +129,4 @@ export default function ProductModal({ product, onClose, onSave }) {
     </div>
   );
 }
+

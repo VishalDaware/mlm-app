@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-import Spinner from '@/components/Spinner'; 
+import { ThreeDots } from 'react-loader-spinner';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,27 +11,20 @@ export default function LoginPage() {
 
   const [adminEmail, setAdminEmail] = useState('admin');
   const [adminPassword, setAdminPassword] = useState('password');
-  const [role, setRole] = useState('Distributor');
+  const [role, setRole] = useState('Franchise'); // Default to Franchise now
   const [userId, setUserId] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false); 
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAdminLogin = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const user = await login({ 
-        userId: adminEmail, 
-        password: adminPassword, 
-        role: 'Admin' 
-      });
-
-      if (user) {
-        router.push('/dashboard/admin');
-      }
+      const user = await login({ userId: adminEmail, password: adminPassword, role: 'Admin' });
+      if (user) router.push('/dashboard/admin');
     } catch (error) {
       console.error('Admin login failed');
     } finally {
-      setIsSubmitting(false); 
+      setIsSubmitting(false);
     }
   };
 
@@ -39,12 +32,7 @@ export default function LoginPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const user = await login({ 
-        userId, 
-        password: 'password', 
-        role 
-      });
-
+      const user = await login({ userId, password: 'password', role });
       if (user) {
         const path = `/dashboard/${role.toLowerCase()}`;
         router.push(path);
@@ -59,10 +47,9 @@ export default function LoginPage() {
   return (
     <main className="flex justify-center items-center h-screen font-sans">
       <div className="p-10 bg-white/80 backdrop-blur-sm rounded-xl shadow-2xl w-full max-w-md border border-gray-200/50">
-      <img src="/logo.png" alt="Logo" className="mx-auto mb-6 w-16 h-16 object-contain" />
-
         <h1 className="text-4xl font-bold mb-8 text-center text-gray-800">Welcome</h1>
 
+        {/* Admin Login Form */}
         <div className="mb-8">
           <form onSubmit={handleAdminLogin}>
             <label className="block mb-2 font-semibold text-gray-600">Log in as Admin</label>
@@ -78,12 +65,8 @@ export default function LoginPage() {
               </div>
               <input type="password" placeholder="Password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="w-full p-3 pl-10 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" required />
             </div>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full h-12 flex justify-center items-center p-3 bg-green-600 text-white rounded-md font-bold hover:bg-green-700 transition-colors shadow-md disabled:bg-green-400"
-            >
-              {isSubmitting ? <Spinner size={30} color="#FFF" /> : 'Log In'}
+            <button type="submit" disabled={isSubmitting} className="w-full h-12 flex justify-center items-center p-3 bg-green-600 text-white rounded-md font-bold hover:bg-green-700 transition-colors shadow-md disabled:bg-green-400">
+              {isSubmitting ? <ThreeDots color="#FFF" height={30} width={30} /> : 'Log In'}
             </button>
           </form>
         </div>
@@ -94,11 +77,15 @@ export default function LoginPage() {
           <div className="flex-grow border-t border-gray-300"></div>
         </div>
 
+        {/* User Login Form */}
         <div>
           <form onSubmit={handleUserLogin}>
             <label className="block mb-2 font-semibold text-gray-600">Log in as</label>
+            {/* UPDATED DROPDOWN */}
             <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-900">
+              <option value="Franchise">Franchise</option>
               <option value="Distributor">Distributor</option>
+              <option value="SubDistributor">Sub-Distributor</option>
               <option value="Dealer">Dealer</option>
               <option value="Farmer">Farmer</option>
             </select>
@@ -106,14 +93,10 @@ export default function LoginPage() {
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                 <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path></svg>
               </div>
-              <input type="text" placeholder="Enter User ID (e.g., DIS3309)" value={userId} onChange={(e) => setUserId(e.target.value)} className="w-full p-3 pl-10 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500" required />
+              <input type="text" placeholder="Enter User ID" value={userId} onChange={(e) => setUserId(e.target.value)} className="w-full p-3 pl-10 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500" required />
             </div>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full h-12 flex justify-center items-center p-3 bg-teal-600 text-white rounded-md font-bold hover:bg-teal-700 transition-colors shadow-md disabled:bg-teal-400"
-            >
-              {isSubmitting ? <Spinner size={30} color="#FFF" /> : 'Log In'}
+            <button type="submit" disabled={isSubmitting} className="w-full h-12 flex justify-center items-center p-3 bg-teal-600 text-white rounded-md font-bold hover:bg-teal-700 transition-colors shadow-md disabled:bg-teal-400">
+              {isSubmitting ? <ThreeDots color="#FFF" height={30} width={30} /> : 'Log In'}
             </button>
           </form>
         </div>

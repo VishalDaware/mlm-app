@@ -3,14 +3,14 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 
-// Helper to get the logged-in user's data from their session token
+// Helper function to get the logged-in user
 async function getUserFromToken() {
   const token = cookies().get('token')?.value;
   if (!token) return null;
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
-    return payload; // e.g., { id, userId, role }
+    return payload;
   } catch {
     return null;
   }
@@ -49,7 +49,7 @@ export async function GET(request) {
   }
 }
 
-// POST a new product and assign its initial stock to the Admin (Admin only)
+// POST a new product and assign its initial stock to the Admin
 export async function POST(request) {
   try {
     const userPayload = await getUserFromToken();
@@ -60,7 +60,6 @@ export async function POST(request) {
     const body = await request.json();
     const {
       name,
-      // We still get the stock value, but we use it differently now
       stock,
       franchisePrice,
       distributorPrice,
@@ -74,14 +73,11 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Invalid stock quantity.'}, { status: 400 });
     }
 
-    // --- NEW LOGIC IN A TRANSACTION ---
-    // Perform both operations together to ensure data integrity
     const newProduct = await prisma.$transaction(async (tx) => {
-      // Step 1: Create the product without the stock field
+      // Step 1: Create the product
       const createdProduct = await tx.product.create({
         data: {
           name,
-          // NO 'stock' field here
           franchisePrice: parseFloat(franchisePrice),
           distributorPrice: parseFloat(distributorPrice),
           subDistributorPrice: parseFloat(subDistributorPrice),
@@ -90,12 +86,11 @@ export async function POST(request) {
         },
       });
 
-      // Step 2: Assign the initial stock to the Admin in the UserInventory table
-      // This creates the very first inventory record for this new product
+      // Step 2: Assign the initial stock to the Admin
       if (stockQuantity > 0) {
           await tx.userInventory.create({
               data: {
-                  userId: userPayload.id, // The logged-in Admin's ID
+                  userId: userPayload.id, // The Admin's ID
                   productId: createdProduct.id,
                   quantity: stockQuantity,
               }
@@ -115,3 +110,4 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Failed to create product' }, { status: 500 });
   }
 }
+

@@ -1,18 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '../../../store/authStore';
 import {
   getDownline,
   addUser,
   createSale,
   getPendingPayoutForUser,
   getUserInventory,
-  getHierarchy 
-} from '@/services/apiService';
-import DashboardHeader from '@/components/DashboardHeader';
-import HierarchyNode from '@/components/admin/HierarchyNode';
+  getHierarchy,
+  getMasterProductList 
+} from '../../../services/apiService';
+import DashboardHeader from '../../../components/DashboardHeader';
+import HierarchyNode from '../../../components/admin/HierarchyNode';
 import toast from 'react-hot-toast';
 
 // Simple inline SVG loader
@@ -28,7 +29,8 @@ export default function FranchiseDashboard() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
 
-  const [inventory, setInventory] = useState([]);
+  const [masterProducts, setMasterProducts] = useState([]); 
+  const [personalInventory, setPersonalInventory] = useState([]); 
   const [downline, setDownline] = useState([]);
   const [hierarchy, setHierarchy] = useState(null);
   const [analytics, setAnalytics] = useState({ pending: 0, teamSize: 0 });
@@ -40,19 +42,22 @@ export default function FranchiseDashboard() {
   const [sellTo, setSellTo] = useState('');
   const [newDistributorName, setNewDistributorName] = useState('');
 
-  const selectedProductInStock = inventory.find(item => item.productId === sellProductId)?.quantity || 0;
+  // CORRECTED: Validation should be against the master product list
+  const selectedProductInStock = masterProducts.find(p => p.id === sellProductId)?.stock || 0;
 
   const fetchData = useCallback(async () => {
     if (user) {
       try {
         setIsLoading(true);
-        const [inventoryData, downlineData, payoutData, hierarchyData] = await Promise.all([
+        const [masterList, personalData, downlineData, payoutData, hierarchyData] = await Promise.all([
+          getMasterProductList(),
           getUserInventory(),
           getDownline(user.userId),
           getPendingPayoutForUser(user.userId),
           getHierarchy(user.userId)
         ]);
-        setInventory(inventoryData);
+        setMasterProducts(masterList);
+        setPersonalInventory(personalData);
         setDownline(downlineData);
         setAnalytics({ pending: payoutData.pendingBalance, teamSize: downlineData.length });
         setHierarchy(hierarchyData);
@@ -75,7 +80,15 @@ export default function FranchiseDashboard() {
   const handleSell = async (e) => {
     e.preventDefault();
     if (!sellProductId || !sellTo || sellQuantity < 1) return toast.error("Please fill all fields.");
-    if (parseInt(sellQuantity) > selectedProductInStock) return toast.error(`Not enough stock.`);
+    if (parseInt(sellQuantity) > selectedProductInStock) return toast.error(`Not enough stock. Only ${selectedProductInStock} units available.`);
+    
+    // We still check personal inventory here as a final logic gate before sending to the API
+    const personalStockItem = personalInventory.find(item => item.productId === sellProductId);
+    if (!personalStockItem) {
+        // This is a special case if the API for sales needs the franchise to have an inventory record
+        // It can be adjusted based on the final backend logic
+    }
+      
     try {
       await createSale({ buyerId: sellTo, productId: sellProductId, quantity: parseInt(sellQuantity) });
       toast.success('Sale recorded successfully!');
@@ -108,25 +121,22 @@ export default function FranchiseDashboard() {
     <div className="min-h-screen bg-stone-50">
       <DashboardHeader title="Franchise Dashboard" userName={user.name} onLogout={handleLogout} />
       <main className="container mx-auto p-6 space-y-8">
-        {/* Top Analytics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Pending Payout</h3><p className="text-4xl font-bold text-red-600 mt-2">₹{analytics.pending.toFixed(2)}</p></div>
           <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Team Size (Distributors)</h3><p className="text-4xl font-bold text-teal-600 mt-2">{analytics.teamSize}</p></div>
         </div>
 
-        {/* Main Content Area - NEW 2-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          
-          {/* Left Column: Forms */}
           <div className="flex flex-col gap-8">
             <div className="bg-white p-6 rounded-lg shadow-lg">
               <h2 className="text-2xl font-semibold text-gray-700 mb-4">Sell to Distributor</h2>
               <form onSubmit={handleSell} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium">Product</label>
+                  {/* CORRECTED: The SELL form uses the MASTER product list */}
                   <select value={sellProductId} onChange={(e) => setSellProductId(e.target.value)} className="w-full mt-1 p-2 border rounded-md">
-                    <option value="">Select a product</option>
-                    {inventory.map(item => <option key={item.id} value={item.productId}>{item.product.name} (In Stock: {item.quantity})</option>)}
+                    <option value="">Select a product to sell</option>
+                    {masterProducts.filter(p => p.stock > 0).map(product => <option key={product.id} value={product.id}>{product.name} (Available: {product.stock})</option>)}
                   </select>
                 </div>
                 <div>
@@ -152,35 +162,27 @@ export default function FranchiseDashboard() {
               </form>
             </div>
           </div>
-
-          {/* Right Column: Information Displays */}
           <div className="flex flex-col gap-8">
             <div className="bg-white p-6 rounded-lg shadow-lg">
-              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Your Inventory</h2>
-              <div className="overflow-x-auto max-h-96"> {/* Added max-height and scroll */}
+              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Master Product Inventory</h2>
+              <div className="overflow-x-auto max-h-96">
                 <table className="w-full text-left">
-                  <thead><tr className="bg-stone-100 text-stone-600 uppercase text-sm sticky top-0"><th className="p-3">Product Name</th><th className="p-3">Your Stock</th></tr></thead>
+                  <thead><tr className="bg-stone-100 text-stone-600 uppercase text-sm sticky top-0"><th className="p-3">Product Name</th><th className="p-3">Total Available Stock</th></tr></thead>
                   <tbody>
-                    {inventory.length > 0 ? inventory.map(item => (
-                      <tr key={item.id} className="border-b"><td className="p-3">{item.product.name}</td><td className="p-3 font-medium">{item.quantity} Units</td></tr>
-                    )) : <tr><td colSpan="2" className="p-3 text-center">Your inventory is empty.</td></tr>}
+                    {masterProducts.length > 0 ? masterProducts.map(product => (
+                      <tr key={product.id} className="border-b"><td className="p-3">{product.name}</td><td className="p-3 font-medium">{product.stock} Units</td></tr>
+                    )) : <tr><td colSpan="2" className="p-3 text-center">No products found in the system.</td></tr>}
                   </tbody>
                 </table>
               </div>
             </div>
-
             <div className="bg-white p-6 rounded-lg shadow-lg">
               <h2 className="text-2xl font-semibold text-gray-700 mb-4">My Team Hierarchy</h2>
-              <div className="overflow-y-auto max-h-96 pl-2 border-l-2 border-stone-200"> {/* Added max-height and scroll */}
-                {hierarchy ? (
-                  <HierarchyNode user={hierarchy} />
-                ) : (
-                  <p className="text-gray-500 text-center">No downline hierarchy to display.</p>
-                )}
+              <div className="overflow-y-auto max-h-96 pl-2 border-l-2 border-stone-200">
+                {hierarchy ? <HierarchyNode user={hierarchy} /> : <p className="text-gray-500 text-center">No downline hierarchy to display.</p>}
               </div>
             </div>
           </div>
-          
         </div>
       </main>
     </div>

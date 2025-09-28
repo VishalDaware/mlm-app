@@ -9,7 +9,7 @@ async function getLoggedInUser() {
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
-    return payload;
+    return payload; // e.g., { id, userId, role }
   } catch {
     return null;
   }
@@ -22,17 +22,45 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const inventory = await prisma.userInventory.findMany({
-      where: {
-        userId: loggedInUser.id,
-        quantity: { gt: 0 } // Only fetch items that are in stock
-      },
-      include: {
-        product: true, // Include all product details (name, price, etc.)
-      },
-    });
+    // --- NEW ROLE-BASED LOGIC STARTS HERE ---
 
-    return NextResponse.json(inventory);
+    // For FRANCHISE users, get ALL products and merge their personal inventory
+    if (loggedInUser.role === 'Franchise') {
+      const allProducts = await prisma.product.findMany();
+      const userInventory = await prisma.userInventory.findMany({
+        where: { userId: loggedInUser.id },
+      });
+
+      // Create a map of the user's inventory for quick lookups
+      const inventoryMap = new Map(
+        userInventory.map(item => [item.productId, item.quantity])
+      );
+
+      // Combine the master product list with the user's personal stock
+      const franchiseInventory = allProducts.map(product => ({
+        id: product.id, // Use product ID as the key for the list
+        productId: product.id,
+        product: product,
+        quantity: inventoryMap.get(product.id) || 0, // Default to 0 if not in their inventory
+        userId: loggedInUser.id,
+      }));
+
+      return NextResponse.json(franchiseInventory);
+    }
+
+    // For ALL OTHER users (Distributor, Dealer, etc.), return only what they own
+    else {
+      const inventory = await prisma.userInventory.findMany({
+        where: {
+          userId: loggedInUser.id,
+          quantity: { gt: 0 } // Only fetch items they actually have in stock
+        },
+        include: {
+          product: true,
+        },
+      });
+      return NextResponse.json(inventory);
+    }
 
   } catch (error) {
     console.error("Failed to fetch inventory:", error);

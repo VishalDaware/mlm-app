@@ -74,6 +74,11 @@ export const deleteProduct = (productId) => {
     credentials: 'include'
   }).then(handleResponse);
 };
+export const getMasterProductList = () => {
+  return fetch('/api/products/all', {
+    credentials: 'include'
+  }).then(handleResponse);
+};
 
 // --- Users ---
 export const addUser = (userData) => {
@@ -163,4 +168,10 @@ export const getUserInventory = () => {
 
 export const getAdminInventory = () => {
   return fetch(`/api/inventory/admin`).then(handleResponse);
+};
+
+export const getUplineInventory = () => {
+  return fetch(`/api/upline-inventory`, {
+    credentials: 'include'
+  }).then(handleResponse);
 };

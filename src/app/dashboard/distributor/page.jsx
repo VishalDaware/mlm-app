@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '../../../store/authStore';
 import { 
   getDownline, 
   addUser, 
@@ -10,9 +10,9 @@ import {
   getPendingPayoutForUser,
   getUserInventory,
   getHierarchy
-} from '@/services/apiService';
-import DashboardHeader from '@/components/DashboardHeader';
-import HierarchyNode from '@/components/admin/HierarchyNode';
+} from '../../../services/apiService';
+import DashboardHeader from '../../../components/DashboardHeader';
+import HierarchyNode from '../../../components/admin/HierarchyNode';
 import toast from 'react-hot-toast';
 
 // Simple inline SVG loader
@@ -114,7 +114,7 @@ export default function DistributorDashboard() {
             <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Team Size (Sub-Distributors)</h3><p className="text-4xl font-bold text-teal-600 mt-2">{analytics.teamSize}</p></div>
         </div>
 
-        {/* Main Content Area - NEW 2-Column Layout */}
+        {/* Main Content Area - 2-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
 
           {/* Left Column: Forms */}
@@ -180,7 +180,6 @@ export default function DistributorDashboard() {
               </div>
             </div>
           </div>
-
         </div>
       </main>
     </div>

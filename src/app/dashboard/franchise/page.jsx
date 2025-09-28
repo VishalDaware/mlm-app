@@ -2,20 +2,20 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '../../../store/authStore';
+import { useAuthStore } from '@/store/authStore';
 import {
   getDownline,
   addUser,
   createSale,
   getPendingPayoutForUser,
   getUserInventory,
-  getHierarchy // 1. IMPORT getHierarchy
-} from '../../../services/apiService';
-import DashboardHeader from '../../../components/DashboardHeader';
-import HierarchyNode from '../../../components/admin/HierarchyNode'; // 2. IMPORT HierarchyNode directly
+  getHierarchy 
+} from '@/services/apiService';
+import DashboardHeader from '@/components/DashboardHeader';
+import HierarchyNode from '@/components/admin/HierarchyNode';
 import toast from 'react-hot-toast';
 
-// Simple inline SVG loader to remove dependency
+// Simple inline SVG loader
 const Loader = () => (
   <div className="flex justify-center items-center h-screen">
     <svg width="80" height="80" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="#166534">
@@ -30,7 +30,7 @@ export default function FranchiseDashboard() {
 
   const [inventory, setInventory] = useState([]);
   const [downline, setDownline] = useState([]);
-  const [hierarchy, setHierarchy] = useState(null); // 3. ADD state for hierarchy data
+  const [hierarchy, setHierarchy] = useState(null);
   const [analytics, setAnalytics] = useState({ pending: 0, teamSize: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -46,17 +46,16 @@ export default function FranchiseDashboard() {
     if (user) {
       try {
         setIsLoading(true);
-        // 4. FETCH hierarchy data along with everything else
         const [inventoryData, downlineData, payoutData, hierarchyData] = await Promise.all([
           getUserInventory(),
           getDownline(user.userId),
           getPendingPayoutForUser(user.userId),
-          getHierarchy(user.userId) // Fetch for the current user's ID
+          getHierarchy(user.userId)
         ]);
         setInventory(inventoryData);
         setDownline(downlineData);
         setAnalytics({ pending: payoutData.pendingBalance, teamSize: downlineData.length });
-        setHierarchy(hierarchyData); // 5. SET the hierarchy state
+        setHierarchy(hierarchyData);
       } catch (error) {
         toast.error("Could not load all dashboard data.");
         console.error("Dashboard fetch error:", error);
@@ -109,26 +108,16 @@ export default function FranchiseDashboard() {
     <div className="min-h-screen bg-stone-50">
       <DashboardHeader title="Franchise Dashboard" userName={user.name} onLogout={handleLogout} />
       <main className="container mx-auto p-6 space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 flex flex-col gap-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Pending Payout</h3><p className="text-4xl font-bold text-red-600 mt-2">₹{analytics.pending.toFixed(2)}</p></div>
-              <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Team Size (Distributors)</h3><p className="text-4xl font-bold text-teal-600 mt-2">{analytics.teamSize}</p></div>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-lg">
-              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Your Inventory</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead><tr className="bg-stone-100 text-stone-600 uppercase text-sm"><th className="p-3">Product Name</th><th className="p-3">Your Stock</th></tr></thead>
-                  <tbody>
-                    {inventory.length > 0 ? inventory.map(item => (
-                      <tr key={item.id} className="border-b"><td className="p-3">{item.product.name}</td><td className="p-3 font-medium">{item.quantity} Units</td></tr>
-                    )) : <tr><td colSpan="2" className="p-3 text-center">Your inventory is empty.</td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+        {/* Top Analytics Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Pending Payout</h3><p className="text-4xl font-bold text-red-600 mt-2">₹{analytics.pending.toFixed(2)}</p></div>
+          <div className="bg-white p-6 rounded-lg shadow-lg text-center"><h3 className="text-stone-500 text-sm font-semibold uppercase">Team Size (Distributors)</h3><p className="text-4xl font-bold text-teal-600 mt-2">{analytics.teamSize}</p></div>
+        </div>
+
+        {/* Main Content Area - NEW 2-Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          
+          {/* Left Column: Forms */}
           <div className="flex flex-col gap-8">
             <div className="bg-white p-6 rounded-lg shadow-lg">
               <h2 className="text-2xl font-semibold text-gray-700 mb-4">Sell to Distributor</h2>
@@ -163,16 +152,35 @@ export default function FranchiseDashboard() {
               </form>
             </div>
           </div>
-        </div>
 
-        {/* 6. RENDER the hierarchy using your suggested logic */}
-        <div className="bg-white p-6 rounded-lg shadow-lg">
-          <h2 className="text-2xl font-semibold text-gray-700 mb-4">My Team Hierarchy</h2>
-          {hierarchy ? (
-            <div className="pl-2 border-l-2 border-stone-200"><HierarchyNode user={hierarchy} /></div>
-          ) : (
-            <p className="text-gray-500 text-center">No downline hierarchy to display.</p>
-          )}
+          {/* Right Column: Information Displays */}
+          <div className="flex flex-col gap-8">
+            <div className="bg-white p-6 rounded-lg shadow-lg">
+              <h2 className="text-2xl font-semibold text-gray-700 mb-4">Your Inventory</h2>
+              <div className="overflow-x-auto max-h-96"> {/* Added max-height and scroll */}
+                <table className="w-full text-left">
+                  <thead><tr className="bg-stone-100 text-stone-600 uppercase text-sm sticky top-0"><th className="p-3">Product Name</th><th className="p-3">Your Stock</th></tr></thead>
+                  <tbody>
+                    {inventory.length > 0 ? inventory.map(item => (
+                      <tr key={item.id} className="border-b"><td className="p-3">{item.product.name}</td><td className="p-3 font-medium">{item.quantity} Units</td></tr>
+                    )) : <tr><td colSpan="2" className="p-3 text-center">Your inventory is empty.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-lg">
+              <h2 className="text-2xl font-semibold text-gray-700 mb-4">My Team Hierarchy</h2>
+              <div className="overflow-y-auto max-h-96 pl-2 border-l-2 border-stone-200"> {/* Added max-height and scroll */}
+                {hierarchy ? (
+                  <HierarchyNode user={hierarchy} />
+                ) : (
+                  <p className="text-gray-500 text-center">No downline hierarchy to display.</p>
+                )}
+              </div>
+            </div>
+          </div>
+          
         </div>
       </main>
     </div>

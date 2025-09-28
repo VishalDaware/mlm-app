@@ -1,4 +1,3 @@
-// CREATE this file at: src/app/api/inventory/route.js
 
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
@@ -27,10 +26,10 @@ export async function GET() {
     const inventory = await prisma.userInventory.findMany({
       where: {
         userId: loggedInUser.id,
-        quantity: { gt: 0 } // Only fetch items that are in stock
+        quantity: { gt: 0 } 
       },
       include: {
-        product: true, // Include all product details (name, price, etc.)
+        product: true, 
       },
     });
 

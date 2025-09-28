@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 
-// Helper function to get the logged-in user
 async function getUserFromToken() {
   const token = cookies().get('token')?.value;
   if (!token) return null;
@@ -16,40 +15,41 @@ async function getUserFromToken() {
   }
 }
 
-// GET all products and CALCULATE their total stock
 export async function GET(request) {
   try {
-    // 1. Get all products from the catalog
-    const products = await prisma.product.findMany({
-      orderBy: { createdAt: 'desc' }
+    const adminUser = await prisma.user.findFirst({
+      where: { role: 'Admin' },
     });
 
-    // 2. For each product, calculate the total stock by summing up all related UserInventory quantities
-    const productsWithTotalStock = await Promise.all(
-      products.map(async (product) => {
-        const result = await prisma.userInventory.aggregate({
-          where: { productId: product.id },
-          _sum: {
-            quantity: true,
-          },
-        });
+    if (!adminUser) {
+      return NextResponse.json({ error: 'System error: Admin account not found.' }, { status: 500 });
+    }
 
-        return {
-          ...product,
-          // Add the calculated total stock to the product object
-          totalStock: result._sum.quantity || 0,
-        };
-      })
+    const [allProducts, adminInventory] = await Promise.all([
+      prisma.product.findMany({ orderBy: { createdAt: 'desc' } }),
+      prisma.userInventory.findMany({
+        where: { userId: adminUser.id },
+      }),
+    ]);
+
+    const adminStockMap = new Map(
+      adminInventory.map(item => [item.productId, item.quantity])
     );
 
-    return NextResponse.json(productsWithTotalStock);
+    const productsWithAdminStock = allProducts.map(product => ({
+      ...product,
+    
+      totalStock: adminStockMap.get(product.id) || 0,
+    }));
+
+    return NextResponse.json(productsWithAdminStock);
+
   } catch (error) {
     console.error("Failed to fetch products:", error);
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
   }
 }
 
-// POST a new product and assign its initial stock to the Admin
 export async function POST(request) {
   try {
     const userPayload = await getUserFromToken();
@@ -74,7 +74,6 @@ export async function POST(request) {
     }
 
     const newProduct = await prisma.$transaction(async (tx) => {
-      // Step 1: Create the product
       const createdProduct = await tx.product.create({
         data: {
           name,
@@ -86,11 +85,10 @@ export async function POST(request) {
         },
       });
 
-      // Step 2: Assign the initial stock to the Admin
       if (stockQuantity > 0) {
           await tx.userInventory.create({
               data: {
-                  userId: userPayload.id, // The Admin's ID
+                  userId: userPayload.id,
                   productId: createdProduct.id,
                   quantity: stockQuantity,
               }

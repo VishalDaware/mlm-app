@@ -44,7 +44,6 @@ export default function ProductManagement() {
       fetchData();
     } catch (e) {
       console.error(e);
-      // Error toast is handled in apiService
     }
   };
 
@@ -108,7 +107,6 @@ export default function ProductManagement() {
                   <tr key={product.id} className="border-b border-stone-200 hover:bg-stone-50">
                     <td className="p-3 text-gray-800 font-medium">{product.name}</td>
                     <td className="p-3 text-gray-800 font-bold">{product.totalStock || 0} Units</td>
-                    {/* THE FIX: Added a fallback of 0 to prevent crashes if a price is null or undefined */}
                     <td className="p-3 text-gray-800">₹{(product.franchisePrice || 0).toFixed(2)}</td>
                     <td className="p-3 text-gray-800">₹{(product.distributorPrice || 0).toFixed(2)}</td>
                     <td className="p-3 text-gray-800">₹{(product.subDistributorPrice || 0).toFixed(2)}</td>

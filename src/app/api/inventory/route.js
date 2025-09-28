@@ -9,7 +9,7 @@ async function getLoggedInUser() {
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
-    return payload; // e.g., { id, userId, role }
+    return payload; 
   } catch {
     return null;
   }
@@ -22,38 +22,33 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // --- NEW ROLE-BASED LOGIC STARTS HERE ---
 
-    // For FRANCHISE users, get ALL products and merge their personal inventory
     if (loggedInUser.role === 'Franchise') {
       const allProducts = await prisma.product.findMany();
       const userInventory = await prisma.userInventory.findMany({
         where: { userId: loggedInUser.id },
       });
 
-      // Create a map of the user's inventory for quick lookups
       const inventoryMap = new Map(
         userInventory.map(item => [item.productId, item.quantity])
       );
 
-      // Combine the master product list with the user's personal stock
       const franchiseInventory = allProducts.map(product => ({
-        id: product.id, // Use product ID as the key for the list
+        id: product.id, 
         productId: product.id,
         product: product,
-        quantity: inventoryMap.get(product.id) || 0, // Default to 0 if not in their inventory
+        quantity: inventoryMap.get(product.id) || 0, 
         userId: loggedInUser.id,
       }));
 
       return NextResponse.json(franchiseInventory);
     }
 
-    // For ALL OTHER users (Distributor, Dealer, etc.), return only what they own
     else {
       const inventory = await prisma.userInventory.findMany({
         where: {
           userId: loggedInUser.id,
-          quantity: { gt: 0 } // Only fetch items they actually have in stock
+          quantity: { gt: 0 } 
         },
         include: {
           product: true,

@@ -4,10 +4,9 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
 export default function ProductModal({ product, onClose, onSave }) {
-  // 1. ADDED 'stock' to the formData state
   const [formData, setFormData] = useState({
     name: '',
-    stock: '', // New field for initial stock
+    stock: '', 
     franchisePrice: '',
     distributorPrice: '',
     subDistributorPrice: '',
@@ -16,12 +15,11 @@ export default function ProductModal({ product, onClose, onSave }) {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // When the modal opens, populate the form with the product's data or reset it
   useEffect(() => {
     if (product) {
       setFormData({
         name: product.name || '',
-        stock: product.stock || '', // Populate stock for editing
+        stock: product.stock || '', 
         franchisePrice: product.franchisePrice || '',
         distributorPrice: product.distributorPrice || '',
         subDistributorPrice: product.subDistributorPrice || '',
@@ -29,12 +27,10 @@ export default function ProductModal({ product, onClose, onSave }) {
         farmerPrice: product.farmerPrice || '',
       });
     } else {
-      // Reset all fields for a new product
       setFormData({ name: '', stock: '', franchisePrice: '', distributorPrice: '', subDistributorPrice: '', dealerPrice: '', farmerPrice: '' });
     }
   }, [product]);
 
-  // Handle changes for any input field
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -44,10 +40,9 @@ export default function ProductModal({ product, onClose, onSave }) {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Convert all price and stock strings to numbers
     const productData = {
       name: formData.name,
-      stock: parseInt(formData.stock, 10), // Parse stock as an integer
+      stock: parseInt(formData.stock, 10), 
       franchisePrice: parseFloat(formData.franchisePrice),
       distributorPrice: parseFloat(formData.distributorPrice),
       subDistributorPrice: parseFloat(formData.subDistributorPrice),
@@ -55,10 +50,8 @@ export default function ProductModal({ product, onClose, onSave }) {
       farmerPrice: parseFloat(formData.farmerPrice),
     };
 
-    // Basic validation
     for (const key in productData) {
       const value = productData[key];
-      // Check if value is not a number (for prices/stock) or is an empty string (for name)
       if ((typeof value === 'number' && isNaN(value)) || (typeof value === 'string' && !value.trim())) {
         toast.error(`Please fill in a valid value for ${key}.`);
         setIsSubmitting(false);
@@ -77,7 +70,6 @@ export default function ProductModal({ product, onClose, onSave }) {
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* 2. Moved Product Name and Stock to a 2-column grid */}
             <div>
               <label className="block text-gray-700 font-semibold mb-2">Product Name</label>
               <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full p-3 border rounded-md" required />
@@ -88,7 +80,6 @@ export default function ProductModal({ product, onClose, onSave }) {
             </div>
           </div>
 
-          {/* Price inputs remain in their own grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             <div>
               <label className="block text-gray-700 font-semibold mb-2">Franchise Price</label>

@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 
-// Helper function to get authenticated user
 async function getUserFromToken() {
   const token = cookies().get('token')?.value;
   if (!token) return null;
@@ -16,7 +15,6 @@ async function getUserFromToken() {
   }
 }
 
-// PUT (update) a product's details (Admin only)
 export async function PUT(request, { params }) {
   try {
     const userPayload = await getUserFromToken();
@@ -25,15 +23,12 @@ export async function PUT(request, { params }) {
     }
 
     const { id } = params;
-    // NOTE: We no longer accept 'stock' here. Stock is managed separately.
     const { name, franchisePrice, distributorPrice, subDistributorPrice, dealerPrice, farmerPrice } = await request.json();
     
-    // Only update the product's pricing and name information.
     const updatedProduct = await prisma.product.update({
       where: { id },
       data: { 
         name, 
-        // NO 'stock' field here
         franchisePrice: parseFloat(franchisePrice), 
         distributorPrice: parseFloat(distributorPrice), 
         subDistributorPrice: parseFloat(subDistributorPrice), 
@@ -49,7 +44,6 @@ export async function PUT(request, { params }) {
   }
 }
 
-// DELETE a product and all its related records safely (Admin only)
 export async function DELETE(request, { params }) {
     const userPayload = await getUserFromToken();
     if (!userPayload || userPayload.role !== 'Admin') {
@@ -59,25 +53,21 @@ export async function DELETE(request, { params }) {
     try {
         const { id } = params;
 
-        // Use a transaction to ensure all related data is deleted before the product itself
         await prisma.$transaction(async (tx) => {
-            // Step 1: Delete all inventory records for this product
             await tx.userInventory.deleteMany({
                 where: { productId: id },
             });
 
-            // Step 2: Delete all transaction history for this product
             await tx.transaction.deleteMany({
                 where: { productId: id },
             });
 
-            // Step 3: Now it's safe to delete the product itself
             await tx.product.delete({
                 where: { id },
             });
         });
 
-        return new NextResponse(null, { status: 204 }); // 204 No Content is standard for a successful DELETE
+        return new NextResponse(null, { status: 204 }); 
 
     } catch (error) {
         console.error("Failed to delete product:", error);

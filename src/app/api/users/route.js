@@ -1,7 +1,6 @@
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
-// ADD THESE TWO LINES
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 
@@ -52,4 +51,3 @@ export async function POST(request) {
   const { password, ...userWithoutPassword } = newUser;
   return NextResponse.json(userWithoutPassword, { status: 201 });
 }
-

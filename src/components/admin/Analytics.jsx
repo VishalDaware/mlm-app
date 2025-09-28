@@ -24,7 +24,6 @@ export default function Analytics() {
         ]);
 
         const totalSales = salesData.reduce((acc, sale) => acc + sale.totalAmount, 0);
-        // THE FIX: Calculate total PROFIT from transactions, not commission
         const totalProfit = salesData.reduce((acc, sale) => acc + sale.profit, 0);
         const activeUsers = usersData.length;
 

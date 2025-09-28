@@ -10,21 +10,17 @@ export default function AddNewUser() {
   const [role, setRole] = useState('Franchise');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // State for the data in our dynamic dropdowns
   const [franchises, setFranchises] = useState([]);
   const [distributors, setDistributors] = useState([]);
   const [subDistributors, setSubDistributors] = useState([]);
   const [dealers, setDealers] = useState([]);
   
-  // State for the selected values from the dropdowns
   const [selectedFranchise, setSelectedFranchise] = useState('');
   const [selectedDistributor, setSelectedDistributor] = useState('');
   const [selectedSubDistributor, setSelectedSubDistributor] = useState('');
   const [selectedDealer, setSelectedDealer] = useState('');
 
-  // --- Data Fetching Logic ---
-
-  // Create a reusable function to fetch franchises, wrapped in useCallback for stability
+ 
   const fetchFranchises = useCallback(async () => {
     try {
       const data = await getUsersByRole('Franchise');
@@ -35,12 +31,10 @@ export default function AddNewUser() {
     }
   }, []);
 
-  // Fetch all franchises when the component first loads
   useEffect(() => {
     fetchFranchises();
   }, [fetchFranchises]);
 
-  // When a franchise is selected, fetch its downline (distributors)
   useEffect(() => {
     if (selectedFranchise) {
       const franchise = franchises.find(f => f.id === selectedFranchise);
@@ -48,12 +42,11 @@ export default function AddNewUser() {
         getDownline(franchise.userId).then(setDistributors).catch(console.error);
       }
     } else {
-      setDistributors([]); // Clear dependent dropdowns if selection is cleared
+      setDistributors([]); 
     }
-    setSelectedDistributor(''); // Reset subsequent selections
+    setSelectedDistributor(''); 
   }, [selectedFranchise, franchises]);
 
-  // When a distributor is selected, fetch its downline (sub-distributors)
   useEffect(() => {
     if (selectedDistributor) {
       const distributor = distributors.find(d => d.id === selectedDistributor);
@@ -65,9 +58,7 @@ export default function AddNewUser() {
     }
     setSelectedSubDistributor('');
   }, [selectedDistributor, distributors]);
-  
-  // When a sub-distributor is selected, fetch its downline (dealers)
-  useEffect(() => {
+    useEffect(() => {
     if (selectedSubDistributor) {
         const subDist = subDistributors.find(sd => sd.id === selectedSubDistributor);
         if(subDist) {
@@ -80,7 +71,6 @@ export default function AddNewUser() {
   }, [selectedSubDistributor, subDistributors]);
 
 
-  // --- Form Handling ---
 
   const resetForm = () => {
     setName('');
@@ -94,7 +84,6 @@ export default function AddNewUser() {
   const handleRoleChange = (e) => {
     const newRole = e.target.value;
     setRole(newRole);
-    // Reset all selections and the name field, but NOT the role itself
     setSelectedFranchise('');
     setSelectedDistributor('');
     setSelectedSubDistributor('');
@@ -123,12 +112,11 @@ export default function AddNewUser() {
       const createdUser = await addUser({ name, role, uplineId });
       toast.success(`User "${createdUser.name}" created successfully! ID: ${createdUser.userId}`);
       
-      // THE FIX: If a franchise was just created, re-fetch the list
       if (role === 'Franchise') {
         fetchFranchises();
       }
       
-      resetForm(); // After successful creation, do a full reset
+      resetForm(); 
 
     } catch (error) {
       console.error("Failed to create user:", error);

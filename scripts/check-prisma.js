@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-// Load .env manually
 const envPath = path.resolve(__dirname, '..', '.env');
 if (fs.existsSync(envPath)) {
   const env = fs.readFileSync(envPath, 'utf8');

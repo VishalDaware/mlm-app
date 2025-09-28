@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    // 1. Find the Admin user
     const adminUser = await prisma.user.findFirst({
       where: { role: 'Admin' },
     });
@@ -12,7 +11,6 @@ export async function GET() {
       return NextResponse.json({ error: 'System error: Admin account not found.' }, { status: 500 });
     }
 
-    // 2. Get all products and the Admin's inventory in parallel
     const [allProducts, adminInventory] = await Promise.all([
       prisma.product.findMany({ orderBy: { name: 'asc' } }),
       prisma.userInventory.findMany({
@@ -20,15 +18,12 @@ export async function GET() {
       }),
     ]);
 
-    // 3. Create a simple map for the Admin's stock quantities
     const adminStockMap = new Map(
       adminInventory.map(item => [item.productId, item.quantity])
     );
 
-    // 4. Combine the data, ensuring every product has a stock value
     const productsWithMasterStock = allProducts.map(product => ({
       ...product,
-      // Use the Admin's stock, or default to 0 if they don't have an entry
       stock: adminStockMap.get(product.id) || 0,
     }));
 

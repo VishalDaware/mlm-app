@@ -1,34 +1,30 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getPendingPayouts, createPayout } from '../../services/apiService';
+import { getPendingPayouts, createPayout } from '@/services/apiService';
 import toast from 'react-hot-toast';
 
-// Simple inline SVG loader to remove dependency
 const Loader = () => (
-  <svg width="80" height="80" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="#166534">
-    <g fill="none" fillRule="evenodd">
-      <g transform="translate(1 1)" strokeWidth="2">
-        <circle strokeOpacity=".5" cx="18" cy="18" r="18"/>
-        <path d="M36 18c0-9.94-8.06-18-18-18">
-          <animateTransform
-            attributeName="transform"
-            type="rotate"
-            from="0 18 18"
-            to="360 18 18"
-            dur="1s"
-            repeatCount="indefinite"/>
-        </path>
-      </g>
-    </g>
-  </svg>
+    <div className="flex justify-center items-center h-64">
+        <svg className="animate-spin h-10 w-10 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    </div>
 );
-
 
 export default function PayoutsView() {
   const [payouts, setPayouts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('All');
+
+  const roles = [
+    { label: 'All', value: 'All' },
+    { label: 'Franchises', value: 'Franchise' },
+    { label: 'Distributors', value: 'Distributor' },
+    { label: 'Sub-Distributors', value: 'SubDistributor' }, 
+    { label: 'Dealers', value: 'Dealer' },
+  ];
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -48,14 +44,11 @@ export default function PayoutsView() {
   }, [fetchData]);
 
   const handlePay = async (userToPay) => {
-    // Replaced window.confirm with a less intrusive custom modal logic if available,
-    // but for now, we'll keep it simple. In a real app, a modal component would be better.
-    const isConfirmed = confirm(`Are you sure you want to pay ₹${userToPay.pendingBalance.toFixed(2)} to ${userToPay.name}?`);
-    if (isConfirmed) {
+    if (window.confirm(`Are you sure you want to pay ₹${userToPay.pendingBalance.toFixed(2)} to ${userToPay.name}?`)) {
       try {
         await createPayout({ userId: userToPay.id, amount: userToPay.pendingBalance });
         toast.success('Payment recorded successfully!');
-        fetchData(); // Refresh the list
+        fetchData(); 
       } catch (error) {
         console.error("Failed to record payment:", error);
         toast.error("Failed to record payment.");
@@ -72,27 +65,22 @@ export default function PayoutsView() {
     <div className="bg-white p-6 rounded-lg shadow-lg">
       <h2 className="text-2xl font-semibold text-gray-700 mb-4">Pending Payouts</h2>
 
-      {/* Filter Buttons */}
       <div className="flex flex-wrap gap-2 mb-6 border-b pb-4">
-        {/* UPDATED: Added all the required roles to the filter array */}
-        {['All', 'Franchise', 'Distributor', 'Sub-Distributor', 'Dealer'].map(role => (
+        {roles.map(role => (
           <button
-            key={role}
-            onClick={() => setFilter(role)}
+            key={role.value}
+            onClick={() => setFilter(role.value)}
             className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-              filter === role ? 'bg-green-600 text-white shadow' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              filter === role.value ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
-            {/* Simple pluralization for display */}
-            {role === 'All' ? role : `${role}s`}
+            {role.label}
           </button>
         ))}
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader />
-        </div>
+        <Loader />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -135,4 +123,5 @@ export default function PayoutsView() {
     </div>
   );
 }
+
 

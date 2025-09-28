@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 
-// Helper function to get the logged-in user
 async function getLoggedInUser() {
   const token = cookies().get('token')?.value;
   if (!token) return null;
@@ -16,11 +15,7 @@ async function getLoggedInUser() {
   }
 }
 
-/**
- * This endpoint is specifically for fetching the inventory of the
- * logged-in user's direct upline. For a Farmer, this gets their
- * assigned Dealer's available stock.
- */
+
 export async function GET() {
   try {
     const loggedInUser = await getLoggedInUser();
@@ -28,20 +23,18 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    // If the user doesn't have an upline (e.g., Admin, or unassigned user),
-    // return an empty array as there's no inventory to show.
+   
     if (!loggedInUser.uplineId) {
         return NextResponse.json([]); 
     }
 
-    // Fetch the inventory of the user's upline (e.g., the Dealer)
     const uplineInventory = await prisma.userInventory.findMany({
       where: {
         userId: loggedInUser.uplineId,
-        quantity: { gt: 0 } // IMPORTANT: Only show products the dealer actually has in stock
+        quantity: { gt: 0 } 
       },
       include: {
-        product: true, // Include full product details (name, price, etc.)
+        product: true, 
       },
       orderBy: {
         product: { name: 'asc' }

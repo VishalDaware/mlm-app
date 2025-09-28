@@ -1,18 +1,17 @@
-// src/components/admin/HierarchyView.jsx
 'use client';
 
 import { useState } from 'react';
 import { getHierarchy } from '@/services/apiService'; 
 import HierarchyNode from './HierarchyNode';
 import { ThreeDots } from 'react-loader-spinner';
-import FullHierarchyModal from './FullHierarchyModal'; // Import the new modal
+import FullHierarchyModal from './FullHierarchyModal'; 
 
 export default function HierarchyView() {
   const [searchInput, setSearchInput] = useState('');
   const [searchResult, setSearchResult] = useState(null);
   const [error, setError] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false); // State for modal
+  const [isModalOpen, setIsModalOpen] = useState(false); 
 
   const handleSearch = async (e) => {
     e.preventDefault();

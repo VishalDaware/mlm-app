@@ -5,7 +5,6 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Starting data correction script...');
 
-  // 1. Find the Admin user to get their actual database ID
   const adminUser = await prisma.user.findUnique({
     where: { userId: 'admin' },
     select: { id: true },
@@ -18,7 +17,6 @@ async function main() {
 
   console.log(`Found Admin user with ID: ${adminUser.id}`);
 
-  // 2. Find all Distributors whose uplineId is currently not set (null)
   const orphanedDistributors = await prisma.user.findMany({
     where: {
       role: 'Distributor',
@@ -33,7 +31,6 @@ async function main() {
 
   console.log(`Found ${orphanedDistributors.length} orphaned distributor(s) to fix.`);
 
-  // 3. Update all of them to set their uplineId to the Admin's ID
   const updateResult = await prisma.user.updateMany({
     where: {
       role: 'Distributor',

@@ -15,7 +15,6 @@ import DashboardHeader from '../../../components/DashboardHeader';
 import HierarchyNode from '../../../components/admin/HierarchyNode';
 import toast from 'react-hot-toast';
 
-// Simple inline SVG loader
 const Loader = () => (
     <div className="flex justify-center items-center h-screen">
         <svg width="80" height="80" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="#166534">
@@ -34,7 +33,6 @@ export default function DealerDashboard() {
   const [analytics, setAnalytics] = useState({ pending: 0, teamSize: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Form states
   const [sellProductId, setSellProductId] = useState('');
   const [sellQuantity, setSellQuantity] = useState(1);
   const [sellTo, setSellTo] = useState('');

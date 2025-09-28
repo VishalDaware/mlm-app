@@ -6,7 +6,6 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
 
-    // Validate the role parameter to ensure it's one of the expected values
     if (!role || !['Franchise', 'Distributor', 'SubDistributor', 'Dealer'].includes(role)) {
       return NextResponse.json({ error: 'Invalid or missing role parameter' }, { status: 400 });
     }
@@ -15,7 +14,7 @@ export async function GET(request) {
       where: {
         role: role,
       },
-      select: { // Only send the necessary data to the frontend
+      select: { 
         id: true,
         userId: true,
         name: true,

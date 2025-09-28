@@ -18,13 +18,11 @@ export async function GET() {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // This is good practice to avoid sending the password to the client
     const { password, ...userWithoutPassword } = user;
     return NextResponse.json(userWithoutPassword);
 
   } catch (error) {
     console.error("Auth check failed:", error);
-    // Catches errors from jwtVerify (e.g., expired token)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 }

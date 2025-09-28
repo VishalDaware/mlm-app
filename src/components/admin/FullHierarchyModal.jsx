@@ -1,4 +1,3 @@
-// src/components/admin/FullHierarchyModal.jsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -10,7 +9,6 @@ export default function FullHierarchyModal({ onClose }) {
   const [hierarchyData, setHierarchyData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch the full hierarchy starting from 'admin'
   const fetchFullHierarchy = useCallback(async () => {
     setIsLoading(true);
     try {

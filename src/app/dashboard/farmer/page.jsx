@@ -3,11 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-import { createSale, getUplineInventory } from '@/services/apiService'; // UPDATED IMPORTS
+import { createSale, getUplineInventory } from '@/services/apiService'; 
 import DashboardHeader from '@/components/DashboardHeader';
 import toast from 'react-hot-toast';
 
-// Simple inline SVG loader
 const Loader = () => (
   <div className="flex justify-center items-center h-screen bg-stone-50">
     <svg width="80" height="80" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="#166534">
@@ -20,10 +19,9 @@ export default function FarmerDashboard() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   
-  const [availableProducts, setAvailableProducts] = useState([]); // State for products from the dealer
+  const [availableProducts, setAvailableProducts] = useState([]); 
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetches the assigned dealer's available stock
   const fetchDealerStock = useCallback(async () => {
     if (user) {
         try {
@@ -53,24 +51,21 @@ export default function FarmerDashboard() {
     router.push('/');
   };
 
-  // Simplified purchase handler
   const handlePurchase = async (productId, quantity) => {
     if (quantity < 1) {
       toast.error("Please enter a valid quantity.");
       return false;
     }
     try {
-      // The backend now correctly identifies the seller (dealer) and buyer (farmer)
       await createSale({ 
         productId, 
         quantity: parseInt(quantity) 
       });
       toast.success('Purchase successful! Your dealer will be notified.');
-      fetchDealerStock(); // Re-fetch to show the dealer's updated stock
+      fetchDealerStock(); 
       return true;
     } catch (error) {
       console.error("Purchase failed:", error);
-      // The apiService already shows a detailed toast on failure
       return false;
     }
   };
@@ -101,7 +96,6 @@ export default function FarmerDashboard() {
   );
 }
 
-// ProductCard now receives a dealer's inventory `item`
 function ProductCard({ item, onPurchase }) {
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -132,7 +126,7 @@ function ProductCard({ item, onPurchase }) {
             onChange={(e) => setQuantity(e.target.value)}
             className="w-20 p-2 border border-gray-300 rounded-md"
             min="1"
-            max={dealerStock} // Farmer cannot order more than the dealer has
+            max={dealerStock} 
             disabled={isSubmitting}
           />
           <button

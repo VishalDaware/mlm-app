@@ -16,7 +16,6 @@ import DashboardHeader from '../../../components/DashboardHeader';
 import HierarchyNode from '../../../components/admin/HierarchyNode';
 import toast from 'react-hot-toast';
 
-// Simple inline SVG loader
 const Loader = () => (
   <div className="flex justify-center items-center h-screen">
     <svg width="80" height="80" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="#166534">
@@ -36,13 +35,11 @@ export default function FranchiseDashboard() {
   const [analytics, setAnalytics] = useState({ pending: 0, teamSize: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Form states
   const [sellProductId, setSellProductId] = useState('');
   const [sellQuantity, setSellQuantity] = useState(1);
   const [sellTo, setSellTo] = useState('');
   const [newDistributorName, setNewDistributorName] = useState('');
 
-  // CORRECTED: Validation should be against the master product list
   const selectedProductInStock = masterProducts.find(p => p.id === sellProductId)?.stock || 0;
 
   const fetchData = useCallback(async () => {
@@ -82,11 +79,9 @@ export default function FranchiseDashboard() {
     if (!sellProductId || !sellTo || sellQuantity < 1) return toast.error("Please fill all fields.");
     if (parseInt(sellQuantity) > selectedProductInStock) return toast.error(`Not enough stock. Only ${selectedProductInStock} units available.`);
     
-    // We still check personal inventory here as a final logic gate before sending to the API
     const personalStockItem = personalInventory.find(item => item.productId === sellProductId);
     if (!personalStockItem) {
-        // This is a special case if the API for sales needs the franchise to have an inventory record
-        // It can be adjusted based on the final backend logic
+       
     }
       
     try {
@@ -133,7 +128,6 @@ export default function FranchiseDashboard() {
               <form onSubmit={handleSell} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium">Product</label>
-                  {/* CORRECTED: The SELL form uses the MASTER product list */}
                   <select value={sellProductId} onChange={(e) => setSellProductId(e.target.value)} className="w-full mt-1 p-2 border rounded-md">
                     <option value="">Select a product to sell</option>
                     {masterProducts.filter(p => p.stock > 0).map(product => <option key={product.id} value={product.id}>{product.name} (Available: {product.stock})</option>)}

@@ -159,9 +159,8 @@ export const getPendingPayoutForUser = (userId) => {
 
 
 // --- Inventory ---
-// CORRECTED: This function now fetches the logged-in user's inventory correctly.
 export const getUserInventory = () => {
-  return fetch(`/api/inventory`, { // No longer needs a userId
+  return fetch(`/api/inventory`, { 
     credentials: 'include'
   }).then(handleResponse);
 };

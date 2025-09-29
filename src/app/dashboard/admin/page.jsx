@@ -15,7 +15,7 @@ const TABS = {
   REPORTS: 'Reports',
   ANALYTICS: 'Analytics & Overview',
   HIERARCHY: 'Hierarchy',
-  ADD_USER: 'Add New User',
+  ADD_USER: 'Users',
   PRODUCTS: 'Product Management',
   PAYOUTS: 'Payouts',
 };

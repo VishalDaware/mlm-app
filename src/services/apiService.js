@@ -198,3 +198,19 @@ export const getUplineInventory = () => {
     credentials: 'include'
   }).then(handleResponse);
 };
+
+// ADD THIS NEW FUNCTION
+
+export const getSalesReport = (timePeriod, role) => {
+  const params = new URLSearchParams();
+  if (timePeriod) {
+    params.append('timePeriod', timePeriod);
+  }
+  if (role && role !== 'All') {
+    params.append('role', role);
+  }
+  
+  return fetch(`/api/reports/sales?${params.toString()}`, {
+    credentials: 'include'
+  }).then(handleResponse);
+};

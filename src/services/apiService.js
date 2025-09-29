@@ -126,6 +126,12 @@ export const deleteUser = (userId) => {
   }).then(handleResponse);
 };
 
+export const getUserDetails = (userId) => {
+  return fetch(`/api/users/details/${userId}`, {
+    credentials: 'include'
+  }).then(handleResponse);
+};
+
 
 // --- Sales ---
 export const createSale = (saleData) => {

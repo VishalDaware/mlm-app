@@ -7,10 +7,11 @@ import {
     getUsersByRole, 
     getDownline,
     updateUser,
-    deleteUser
-} from '../../services/apiService';
+    deleteUser,
+    getUserDetails
+} from '@/services/apiService';
 import toast from 'react-hot-toast';
-import EditUserModal from './EditUserModal'; // Import the EditUserModal
+import EditUserModal from '@/components/admin/EditUserModal';
 
 // --- Reusable Loader Component ---
 const Loader = ({ size = 'w-8 h-8', color = 'text-white' }) => (
@@ -32,20 +33,28 @@ export default function AddNewUser() {
                 onClick={() => setActiveTab('create')}
                 className={`px-4 py-2 text-lg font-semibold transition-colors ${activeTab === 'create' ? 'border-b-2 border-green-600 text-green-600' : 'text-gray-500 hover:text-green-600'}`}
             >
-                Create New User
+                Create User
             </button>
             <button
-                onClick={() => setActiveTab('view')}
-                className={`px-4 py-2 text-lg font-semibold transition-colors ${activeTab === 'view' ? 'border-b-2 border-green-600 text-green-600' : 'text-gray-500 hover:text-green-600'}`}
+                onClick={() => setActiveTab('manage')}
+                className={`px-4 py-2 text-lg font-semibold transition-colors ${activeTab === 'manage' ? 'border-b-2 border-green-600 text-green-600' : 'text-gray-500 hover:text-green-600'}`}
             >
-                View & Manage Users
+                Manage Users
+            </button>
+            <button
+                onClick={() => setActiveTab('search')}
+                className={`px-4 py-2 text-lg font-semibold transition-colors ${activeTab === 'search' ? 'border-b-2 border-green-600 text-green-600' : 'text-gray-500 hover:text-green-600'}`}
+            >
+                Search & View
             </button>
         </div>
-        {activeTab === 'create' ? <CreateUserForm /> : <UserManagementDashboard />}
+        
+        {activeTab === 'create' && <CreateUserForm />}
+        {activeTab === 'manage' && <UserManagementDashboard />}
+        {activeTab === 'search' && <ViewUserDetails />}
     </div>
   );
 }
-
 
 // --- Sub-component for Creating a User ---
 function CreateUserForm() {
@@ -144,7 +153,6 @@ function CreateUserForm() {
         }
     };
 
-    // The JSX for this form is quite long, so it's kept as-is from your previous version.
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -222,8 +230,7 @@ function CreateUserForm() {
     );
 }
 
-
-// --- NEW: Sub-component for Viewing and Managing Users ---
+// --- Sub-component for Viewing and Managing Users ---
 function UserManagementDashboard() {
     const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -262,19 +269,18 @@ function UserManagementDashboard() {
             toast.success("User updated successfully!");
             setIsModalOpen(false);
             setEditingUser(null);
-            fetchUsers(); // Refresh the user list
+            fetchUsers();
         } catch (error) {
             console.error("Failed to update user:", error);
-            // Error toast is handled by apiService
         }
     };
     
     const handleDelete = async (user) => {
         if (window.confirm(`Are you sure you want to delete ${user.name} (${user.userId})? This will also re-assign their downline.`)) {
             try {
-                await deleteUser(user.id); // Use the unique database ID
+                await deleteUser(user.id);
                 toast.success("User deleted successfully.");
-                fetchUsers(); // Refresh the user list
+                fetchUsers();
             } catch (error) {
                 console.error("Failed to delete user:", error);
             }
@@ -351,6 +357,73 @@ function UserManagementDashboard() {
                             )}
                         </tbody>
                     </table>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// --- NEW: Sub-component for Searching and Viewing a User's Details ---
+function ViewUserDetails() {
+    const [searchInput, setSearchInput] = useState('');
+    const [userDetails, setUserDetails] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleSearch = async (e) => {
+        e.preventDefault();
+        if (!searchInput.trim()) return;
+
+        setIsLoading(true);
+        setError('');
+        setUserDetails(null);
+        try {
+            const data = await getUserDetails(searchInput.trim());
+            setUserDetails(data);
+        } catch (err) {
+            const errorMessage = err.message || 'User not found.';
+            setError(errorMessage);
+            toast.error(errorMessage);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div>
+            <form onSubmit={handleSearch} className="flex items-end gap-4 mb-6">
+                <div className="flex-grow">
+                    <label className="block text-gray-700 font-semibold mb-2">Search by User ID</label>
+                    <input value={searchInput} onChange={(e) => setSearchInput(e.target.value)} type="text" placeholder="e.g., FRN1234" className="w-full p-3 border rounded-md" />
+                </div>
+                <button type="submit" disabled={isLoading} className="w-32 h-12 flex justify-center items-center px-6 py-3 bg-blue-600 text-white font-bold rounded-md hover:bg-blue-700 disabled:bg-blue-400">
+                    {isLoading ? <Loader /> : 'Search'}
+                </button>
+            </form>
+
+            {error && !isLoading && <p className="text-center text-red-500 font-semibold py-8">{error}</p>}
+            
+            {userDetails && (
+                <div className="space-y-4 pt-4 border-t animate-fade-in">
+                    <h3 className="text-xl font-bold text-gray-800">{userDetails.name} <span className="text-base font-medium text-gray-500">({userDetails.userId} - {userDetails.role})</span></h3>
+                    {userDetails.upline && <p><strong>Upline:</strong> {userDetails.upline.name} ({userDetails.upline.userId})</p>}
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mt-4 pt-4 border-t">
+                        <div><p className="text-sm text-gray-500">Mobile</p><p>{userDetails.mobile || 'N/A'}</p></div>
+                        <div><p className="text-sm text-gray-500">Email</p><p>{userDetails.email || 'N/A'}</p></div>
+                        <div><p className="text-sm text-gray-500">PAN Card</p><p>{userDetails.pan || 'N/A'}</p></div>
+                        <div><p className="text-sm text-gray-500">Aadhar</p><p>{userDetails.aadhar || 'N/A'}</p></div>
+                        <div className="md:col-span-2"><p className="text-sm text-gray-500">Address</p><p>{userDetails.address || 'N/A'}, {userDetails.pincode || ''}</p></div>
+                    </div>
+
+                     <div className="md:col-span-2 pt-4 border-t">
+                        <p className="font-semibold text-gray-700 mb-2">Crops:</p>
+                        {userDetails.crops && userDetails.crops.length > 0 ? (
+                            <ul className="list-disc list-inside flex flex-wrap gap-x-6">
+                                {userDetails.crops.map(crop => <li key={crop}>{crop}</li>)}
+                            </ul>
+                        ) : <p>No crops specified.</p>}
+                    </div>
                 </div>
             )}
         </div>

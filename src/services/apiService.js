@@ -108,6 +108,24 @@ export const getUsers = () => {
   }).then(handleResponse);
 };
 
+// ADD THIS FUNCTION to update a user's details
+export const updateUser = (userId, userData) => {
+  return fetch(`/api/users/${userId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userData),
+    credentials: 'include'
+  }).then(handleResponse);
+};
+
+// ADD THIS FUNCTION to delete a user
+export const deleteUser = (userId) => {
+  return fetch(`/api/users/${userId}`, {
+    method: 'DELETE',
+    credentials: 'include'
+  }).then(handleResponse);
+};
+
 
 // --- Sales ---
 export const createSale = (saleData) => {

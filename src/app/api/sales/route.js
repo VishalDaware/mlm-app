@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 
+// Helper function to get the logged-in user
 async function getLoggedInUser() {
   const token = cookies().get('token')?.value;
   if (!token) return null;
@@ -15,6 +16,7 @@ async function getLoggedInUser() {
   }
 }
 
+// GET function (for admin reports) - No changes needed
 export async function GET() {
   try {
     const loggedInUser = await getLoggedInUser();
@@ -36,6 +38,7 @@ export async function GET() {
   }
 }
 
+// POST function (for creating sales) - UPDATED LOGIC
 export async function POST(request) {
   try {
     const loggedInUser = await getLoggedInUser();
@@ -44,41 +47,24 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { productId, quantity } = body;
+    const { buyerId, productId, quantity } = body;
     
-    let sellerId;
-    let buyerId;
+    // Determine the user whose stock will be decremented ('stockHolder')
     let stockHolderId;
-
-    if (loggedInUser.role === 'Farmer') {
-        if (!loggedInUser.uplineId) {
-            return NextResponse.json({ error: 'Your account is not assigned to a dealer.' }, { status: 400 });
-        }
-        sellerId = loggedInUser.uplineId;
-        buyerId = loggedInUser.id;
-        stockHolderId = sellerId; 
-    } 
-    else if (loggedInUser.role === 'Franchise') {
-        const adminUser = await prisma.user.findFirst({ where: { role: 'Admin' } });
-        if (!adminUser) {
-            return NextResponse.json({ error: 'System configuration error: Admin account not found.' }, { status: 500 });
-        }
-        sellerId = loggedInUser.id; 
-        buyerId = body.buyerId;     
-        stockHolderId = adminUser.id; 
-    }
-    else {
-        sellerId = loggedInUser.id;
-        buyerId = body.buyerId;
-        stockHolderId = sellerId; 
+    if (loggedInUser.role === 'Franchise') {
+      const adminUser = await prisma.user.findFirst({ where: { role: 'Admin' } });
+      if (!adminUser) {
+        return NextResponse.json({ error: 'System configuration error: Admin account not found.' }, { status: 500 });
+      }
+      stockHolderId = adminUser.id;
+    } else {
+      // For all other roles, they sell from their own personal stock.
+      stockHolderId = loggedInUser.id;
     }
 
-    if (!buyerId) {
-        return NextResponse.json({ error: 'Buyer ID is required for this transaction.' }, { status: 400 });
-    }
-
+    // Fetch all necessary records in parallel
     const [seller, buyer, product, stockHolderInventory] = await Promise.all([
-      prisma.user.findUnique({ where: { id: sellerId } }),
+      prisma.user.findUnique({ where: { id: loggedInUser.id } }),
       prisma.user.findUnique({ where: { id: buyerId } }),
       prisma.product.findUnique({ where: { id: productId } }),
       prisma.userInventory.findUnique({
@@ -86,6 +72,7 @@ export async function POST(request) {
       }),
     ]);
     
+    // --- Validations ---
     if (!seller || !buyer || !product) {
       return NextResponse.json({ error: 'Invalid user or product.' }, { status: 400 });
     }
@@ -93,6 +80,7 @@ export async function POST(request) {
       return NextResponse.json({ error: `The seller has insufficient stock for ${product.name}.` }, { status: 400 });
     }
 
+    // --- Price and Profit Calculation (No changes needed here) ---
     let purchasePrice;
     let costPrice;
 
@@ -118,20 +106,37 @@ export async function POST(request) {
     const totalAmount = purchasePrice * quantity;
     const profit = (purchasePrice - costPrice) * quantity;
 
+    // --- Database Transaction ---
     const newTransaction = await prisma.$transaction(async (tx) => {
+      // 1. ALWAYS decrement stock from the stock holder (Admin or self)
       await tx.userInventory.update({
         where: { id: stockHolderInventory.id },
         data: { quantity: { decrement: quantity } },
       });
 
-      await tx.userInventory.upsert({
-        where: { userId_productId: { userId: buyerId, productId: productId } },
-        update: { quantity: { increment: quantity } },
-        create: { userId: buyerId, productId: productId, quantity: quantity },
-      });
+      // --- THIS IS THE KEY CHANGE ---
+      // 2. ONLY add stock to the buyer IF they are NOT a Farmer.
+      if (buyer.role !== 'Farmer') {
+        await tx.userInventory.upsert({
+          where: { userId_productId: { userId: buyerId, productId: productId } },
+          update: { quantity: { increment: quantity } },
+          create: { userId: buyerId, productId: productId, quantity: quantity },
+        });
+      }
+      // If the buyer is a Farmer, this step is skipped, and the stock is "consumed".
+      // --- END OF CHANGE ---
 
+      // 3. ALWAYS create the transaction record
       const transaction = await tx.transaction.create({
-        data: { sellerId, buyerId, productId, quantity, purchasePrice, totalAmount, profit },
+        data: { 
+          sellerId: loggedInUser.id, // The seller is always the logged-in user
+          buyerId, 
+          productId, 
+          quantity, 
+          purchasePrice, 
+          totalAmount, 
+          profit 
+        },
       });
 
       return transaction;

@@ -29,6 +29,14 @@ model User {
   uplineId           String?
   upline             User?           @relation("Hierarchy", fields: [uplineId], references: [id])
   downline           User[]          @relation("Hierarchy")
+  // --- NEW DETAILED USER FIELDS ---
+  mobile    String?
+  email     String?
+  pan       String?
+  aadhar    String?
+  address   String?
+  pincode   String?
+  crops     String[] @default([]) // Stores a list of selected crops
   payouts            Payout[]
   inventory          UserInventory[] // ADDED: Relation to this user's personal inventory
   transactionsAsSeller Transaction[]   @relation("SellerTransactions")

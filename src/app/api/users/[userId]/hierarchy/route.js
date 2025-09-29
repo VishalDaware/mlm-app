@@ -1,6 +1,9 @@
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
+// This line ensures the API always fetches fresh data from the database.
+export const dynamic = 'force-dynamic';
+
 export async function GET(request, { params }) {
   const { userId } = params;
 
@@ -9,9 +12,7 @@ export async function GET(request, { params }) {
       select: { id: true, userId: true, name: true, role: true, uplineId: true },
     });
 
-
     const userMap = new Map(allUsers.map(user => [user.id, { ...user, children: [] }]));
-
 
     allUsers.forEach(user => {
       if (user.uplineId) {
@@ -22,10 +23,22 @@ export async function GET(request, { params }) {
       }
     });
 
-    const rootUserInDb = allUsers.find(u => u.userId.toLowerCase() === userId.toLowerCase());
+    // --- THIS IS THE FIX ---
+    // We now have two ways to find the starting user for the hierarchy.
+    let rootUserInDb;
+
+    // 1. If the request is for the 'admin', we find the user by their ROLE.
+    // This is robust and doesn't depend on a hardcoded ID.
+    if (userId.toLowerCase() === 'admin') {
+      rootUserInDb = allUsers.find(u => u.role === 'Admin');
+    } 
+    // 2. Otherwise, we find the user by their specific userId as before.
+    else {
+      rootUserInDb = allUsers.find(u => u.userId.toLowerCase() === userId.toLowerCase());
+    }
     
     if (!rootUserInDb) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Starting user for hierarchy not found' }, { status: 404 });
     }
     
     const hierarchyData = userMap.get(rootUserInDb.id);
@@ -37,3 +50,4 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+

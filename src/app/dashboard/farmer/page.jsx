@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
-import { createSale, getUplineInventory } from '@/services/apiService'; 
-import DashboardHeader from '@/components/DashboardHeader';
+import { useAuthStore } from '../../../store/authStore';
+import { createSale, getUplineInventory } from '../../../services/apiService'; 
+import DashboardHeader from '../../../components/DashboardHeader';
 import toast from 'react-hot-toast';
 
+// Using the self-contained SVG loader for consistency
 const Loader = () => (
   <div className="flex justify-center items-center h-screen bg-stone-50">
     <svg width="80" height="80" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="#166534">
@@ -37,8 +38,12 @@ export default function FarmerDashboard() {
   }, [user]);
 
   useEffect(() => {
-    fetchDealerStock();
-  }, [fetchDealerStock]);
+    // This ensures data is fetched only once when the user is available
+    if (user) {
+        setIsLoading(true);
+        fetchDealerStock();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user && user.role !== 'Farmer') {
@@ -62,10 +67,11 @@ export default function FarmerDashboard() {
         quantity: parseInt(quantity) 
       });
       toast.success('Purchase successful! Your dealer will be notified.');
-      fetchDealerStock(); 
+      fetchDealerStock(); // Re-fetch to show the dealer's updated stock
       return true;
     } catch (error) {
       console.error("Purchase failed:", error);
+      // The apiService now handles showing the error toast
       return false;
     }
   };
@@ -115,7 +121,7 @@ function ProductCard({ item, onPurchase }) {
       <div className="p-4 flex-grow">
         <h3 className="text-lg font-bold text-gray-800 leading-tight">{product.name}</h3>
         <p className="text-sm text-gray-500">Available from dealer: {dealerStock} Units</p>
-        <p className="text-2xl text-green-600 font-bold my-4">₹{product.farmerPrice.toFixed(2)}</p>
+        <p className="text-2xl text-green-600 font-bold my-4">₹{product.farmerPrice?.toFixed(2) || '0.00'}</p>
       </div>
 
       <div className="mt-auto p-4 border-t border-stone-200 bg-stone-50 rounded-b-lg">

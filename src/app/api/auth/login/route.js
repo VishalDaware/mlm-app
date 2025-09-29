@@ -9,28 +9,46 @@ export async function POST(request) {
     const body = await request.json();
     const { userId, password, role } = body;
 
+    if (!userId) {
+        return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    }
+
     const user = await prisma.user.findUnique({
       where: { userId: userId },
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid User ID' }, { status: 401 });
     }
 
-    const isPasswordCorrect = (user.password.length > 20) 
-      ? await bcrypt.compare(password, user.password)
-      : (password === user.password);
+    // --- NEW LOGIC: Role-based password check ---
 
-    if (!isPasswordCorrect || (role && user.role !== role)) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    // 1. If the user is an Admin, they MUST provide a correct password.
+    if (user.role === 'Admin') {
+      if (!password) {
+        return NextResponse.json({ error: 'Password is required for Admin login' }, { status: 400 });
+      }
+      const isAdminPasswordCorrect = await bcrypt.compare(password, user.password);
+      if (!isAdminPasswordCorrect) {
+        return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+      }
+    } 
+    // 2. For all other roles, we only check if the role from the form matches their actual role.
+    // This allows them to log in without a password.
+    else {
+      if (user.role !== role) {
+        return NextResponse.json({ error: `This user is a ${user.role}, not a ${role}.` }, { status: 401 });
+      }
     }
 
+    // --- Token Generation (No changes needed here) ---
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-
     const token = await new SignJWT({
         id: user.id,
         userId: user.userId,
         role: user.role,
+        name: user.name,
+        uplineId: user.uplineId,
       })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
@@ -53,3 +71,4 @@ export async function POST(request) {
     return NextResponse.json({ error: 'An internal server error occurred' }, { status: 500 });
   }
 }
+

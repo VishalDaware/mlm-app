@@ -2,7 +2,7 @@ import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
-
+export const dynamic = 'force-dynamic';
 // Helper function to get the logged-in user
 async function getLoggedInUser() {
   const token = cookies().get('token')?.value;

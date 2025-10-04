@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { Role } from '@prisma/client';
-
+export const dynamic = 'force-dynamic';
 // Helper function to get user from token
 async function getUserFromToken() {
   const token = cookies().get('token')?.value;

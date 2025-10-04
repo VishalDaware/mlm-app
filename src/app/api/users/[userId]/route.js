@@ -1,6 +1,6 @@
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-
+export const dynamic = 'force-dynamic';
 // --- PUT: Update a user's details ---
 export async function PUT(request, { params }) {
     try {

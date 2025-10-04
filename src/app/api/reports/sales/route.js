@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { Role } from '@prisma/client'; // Import the Role enum from Prisma
-
+export const dynamic = 'force-dynamic';
 // Helper function to get the logged-in user
 async function getLoggedInUser() {
   const token = cookies().get('token')?.value;

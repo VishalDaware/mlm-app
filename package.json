@@ -11,7 +11,9 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "npx prisma db seed",
-    "fix:hierarchy": "node prisma/fixHierarchy.js"
+    "fix:hierarchy": "node prisma/fixHierarchy.js",
+    "postinstall": "node scripts/prisma-postinstall.js",
+    "render-build": "node scripts/render-build.js"
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",

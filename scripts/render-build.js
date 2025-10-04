@@ -6,6 +6,7 @@
 // - Finally run the Next.js build
 
 const { execSync } = require('child_process');
+const net = require('net');
 
 function getEnv(name) {
   if (process.env[name]) return process.env[name];
@@ -22,12 +23,64 @@ function getEnv(name) {
   return undefined;
 }
 
+function parseHostPort(databaseUrl) {
+  try {
+    const normalized = databaseUrl.match(/^postgres/) ? databaseUrl : `postgresql://${databaseUrl}`;
+    const u = new URL(normalized);
+    return { host: u.hostname, port: u.port || '5432' };
+  } catch (e) {
+    return null;
+  }
+}
+
+function canConnect(host, port, timeout = 5000) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    let done = false;
+    socket.setTimeout(timeout);
+    socket.once('connect', () => {
+      done = true;
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once('timeout', () => {
+      if (!done) {
+        done = true;
+        socket.destroy();
+        resolve(false);
+      }
+    });
+    socket.once('error', () => {
+      if (!done) {
+        done = true;
+        socket.destroy();
+        resolve(false);
+      }
+    });
+    socket.connect(Number(port), host);
+  });
+}
+
 try {
   const dbUrl = getEnv('DATABASE_URL') || '';
   if (dbUrl.startsWith('postgres://') || dbUrl.startsWith('postgresql://')) {
-    console.log('Detected Postgres URL. Running migrations and prisma generate...');
-    execSync('npx prisma migrate deploy', { stdio: 'inherit' });
-    execSync('npx prisma generate', { stdio: 'inherit' });
+    console.log('Detected Postgres URL. Checking DB reachability before running migrations...');
+    const hp = parseHostPort(dbUrl);
+    if (hp) {
+      const reachable = await canConnect(hp.host, hp.port, 8000);
+      if (reachable) {
+        console.log('DB host reachable. Running migrations and prisma generate...');
+        execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+        execSync('npx prisma generate', { stdio: 'inherit' });
+      } else {
+        console.warn('DB host not reachable from build environment. Skipping `prisma migrate deploy`.');
+        console.warn('Proceeding with `prisma generate` and build (migrations must be applied elsewhere).');
+        execSync('npx prisma generate', { stdio: 'inherit' });
+      }
+    } else {
+      console.warn('Could not parse DB host from DATABASE_URL, skipping migrations for safety.');
+      execSync('npx prisma generate', { stdio: 'inherit' });
+    }
   } else if (dbUrl.startsWith('prisma://')) {
     console.log('Detected Prisma Data Proxy URL. Skipping migrate; running `prisma generate --data-proxy`...');
     execSync('npx prisma generate --data-proxy', { stdio: 'inherit' });
